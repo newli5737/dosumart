@@ -1,0 +1,26 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Be Vietnam Pro", "Inter", system-ui, sans-serif;
+  --color-brand-orange: #f97316;
+  --color-brand-green: #16a34a;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: #f1f5f9;
+  color: #111827;
+  -webkit-font-smoothing: antialiased;
+}
+
+.pos-shell {
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(22, 163, 74, 0.06), transparent),
+    #f1f5f9;
+}
+
+@media print {
+  body * { visibility: hidden; }
+  .print-area, .print-area * { visibility: visible; }
+  .print-area { position: absolute; left: 0; top: 0; width: 80mm; }
+}

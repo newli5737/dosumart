@@ -1,0 +1,25 @@
+{
+  "name": "dosumart",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Hệ thống bán lẻ omnichannel - Storefront, Admin, POS",
+  "scripts": {
+    "dev": "pnpm -r --parallel dev",
+    "dev:backend": "pnpm --filter @dosumart/backend dev",
+    "dev:storefront": "pnpm --filter @dosumart/storefront dev",
+    "dev:admin": "pnpm --filter @dosumart/admin dev",
+    "dev:pos": "pnpm --filter @dosumart/pos dev",
+    "build": "pnpm -r build",
+    "db:generate": "pnpm --filter @dosumart/backend prisma:generate",
+    "db:push": "pnpm --filter @dosumart/backend prisma:push",
+    "db:seed": "pnpm --filter @dosumart/backend prisma:seed",
+    "db:studio": "pnpm --filter @dosumart/backend prisma:studio"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "cloudinary": "^2.10.0",
+    "googlethis": "^1.8.0"
+  }
+}

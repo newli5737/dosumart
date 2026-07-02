@@ -1,0 +1,41 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Be Vietnam Pro", "Inter", system-ui, sans-serif;
+  --color-brand-orange: #f97316;
+  --color-brand-green: #16a34a;
+  --color-sidebar: #111827;
+  --color-sidebar-hover: #1f2937;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: #f1f5f9;
+  color: #111827;
+  -webkit-font-smoothing: antialiased;
+}
+
+.admin-shell {
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(249, 115, 22, 0.08), transparent),
+    radial-gradient(ellipse 60% 40% at 100% 0%, rgba(22, 163, 74, 0.05), transparent),
+    #f1f5f9;
+}
+
+@keyframes slide-in-right {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.25s ease-out;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.35s ease-out;
+}
