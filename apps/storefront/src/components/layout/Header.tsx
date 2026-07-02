@@ -3,7 +3,8 @@ import { Search, ShoppingBag, User, Menu, X } from 'lucide-react';
 import { useState } from 'react';
 import { useLocalCartStore } from '@dosumart/stores';
 import { useQuery } from '@tanstack/react-query';
-import { categoriesApi, authApi } from '@dosumart/api';
+import { categoriesApi } from '@dosumart/api';
+import { useAuth } from '@dosumart/ui';
 import type { Category } from '@dosumart/types';
 
 export default function Header() {
@@ -13,19 +14,12 @@ export default function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [catOpen, setCatOpen] = useState(false);
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const { data: categories } = useQuery({
     queryKey: ['categories'],
     queryFn: categoriesApi.list,
   });
-
-  const { data: meRes } = useQuery({
-    queryKey: ['auth', 'me'],
-    queryFn: authApi.me,
-    retry: false,
-  });
-  
-  const user = meRes?.data;
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,6 +28,8 @@ export default function Header() {
       setMobileOpen(false);
     }
   };
+
+  const displayName = user?.fullName?.split(' ').pop() || user?.email?.split('@')[0] || 'Tài khoản';
 
   return (
     <header className="sticky top-0 z-50 border-b border-gray-200/80 bg-white/95 backdrop-blur-md">
@@ -96,7 +92,7 @@ export default function Header() {
             </NavLink>
             {user ? (
               <NavLink to="/tai-khoan" icon={<User className="h-4 w-4" />}>
-                Tài khoản
+                {displayName}
               </NavLink>
             ) : (
               <NavLink to="/dang-nhap" icon={<User className="h-4 w-4" />}>
@@ -148,7 +144,7 @@ export default function Header() {
             </Link>
             {user ? (
               <Link to="/tai-khoan" className="rounded-[10px] px-3 py-2.5 text-sm font-medium" onClick={() => setMobileOpen(false)}>
-                Tài khoản
+                {displayName}
               </Link>
             ) : (
               <Link to="/dang-nhap" className="rounded-[10px] px-3 py-2.5 text-sm font-medium" onClick={() => setMobileOpen(false)}>

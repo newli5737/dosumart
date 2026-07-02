@@ -1,26 +1,38 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Mail, Lock, LogIn } from 'lucide-react';
+import { authApi } from '@dosumart/api';
+import { AUTH_QUERY_KEY } from '@dosumart/ui';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Simulate login
-    setTimeout(() => {
+    setError('');
+    setLoading(true);
+    try {
+      await authApi.login(email, password);
+      await queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY });
       navigate('/');
-    }, 1000);
+    } catch {
+      setError('Email hoặc mật khẩu không đúng. Vui lòng thử lại.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
       <div className="w-full max-w-4xl overflow-hidden rounded-3xl bg-white shadow-2xl flex">
-        {/* Left Side: Image/Banner */}
         <div className="hidden w-1/2 bg-gradient-to-br from-orange-400 to-[#f97316] p-12 text-white lg:flex lg:flex-col lg:justify-between relative overflow-hidden">
-          <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&q=80')] bg-cover bg-center opacity-20 mix-blend-overlay" />
+          <div className="absolute inset-0 bg-[url('https://res.cloudinary.com/dn00btmpw/image/upload/v1782982295/d0ocynjittjuki4jpjco.jpg')] bg-cover bg-center opacity-30 mix-blend-overlay" />
           <div className="relative z-10">
             <Link to="/" className="inline-flex items-center gap-2 rounded-full bg-white/20 px-4 py-2 text-sm font-medium text-white backdrop-blur-md transition-colors hover:bg-white/30">
               <ArrowLeft className="h-4 w-4" />
@@ -35,7 +47,6 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Right Side: Form */}
         <div className="w-full p-8 sm:p-12 lg:w-1/2">
           <div className="text-center lg:text-left">
             <img src="/dosumart.png" alt="DoSuMart" className="mx-auto h-12 w-auto lg:mx-0" />
@@ -49,6 +60,12 @@ export default function LoginPage() {
           </div>
 
           <form className="mt-10 space-y-6" onSubmit={handleLogin}>
+            {error && (
+              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+                {error}
+              </div>
+            )}
+
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700">Email</label>
@@ -97,7 +114,6 @@ export default function LoginPage() {
                   Ghi nhớ đăng nhập
                 </label>
               </div>
-
               <div className="text-sm">
                 <a href="#" className="font-semibold text-[#f97316] hover:text-[#ea580c]">
                   Quên mật khẩu?
@@ -105,15 +121,14 @@ export default function LoginPage() {
               </div>
             </div>
 
-            <div>
-              <button
-                type="submit"
-                className="flex w-full justify-center rounded-xl bg-[#f97316] py-3 px-4 text-sm font-semibold text-white shadow-sm hover:bg-[#ea580c] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f97316] transition-colors"
-              >
-                <LogIn className="mr-2 h-5 w-5" />
-                Đăng nhập
-              </button>
-            </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex w-full justify-center rounded-xl bg-[#f97316] py-3 px-4 text-sm font-semibold text-white shadow-sm hover:bg-[#ea580c] disabled:opacity-60 transition-colors"
+            >
+              <LogIn className="mr-2 h-5 w-5" />
+              {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
+            </button>
           </form>
         </div>
       </div>

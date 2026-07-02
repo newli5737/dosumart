@@ -9,8 +9,6 @@ import type { Product } from '@dosumart/types';
 
 const emptyForm = {
   name: '',
-  sku: '',
-  barcode: '',
   categoryId: '',
   brandId: '',
   description: '',
@@ -58,30 +56,37 @@ export default function ProductsPage() {
   });
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = e.target.files;
+    if (!files?.length) return;
     try {
       setUploading(true);
       const sigRes = await api.get('/upload/signature');
       const sigData = sigRes.data;
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('api_key', sigData.api_key);
-      formData.append('timestamp', sigData.timestamp);
-      formData.append('signature', sigData.signature);
-      formData.append('upload_preset', sigData.upload_preset);
-      const cloudRes = await fetch(`https://api.cloudinary.com/v1_1/${sigData.cloud_name}/image/upload`, {
-        method: 'POST',
-        body: formData,
-      });
-      const cloudData = await cloudRes.json();
-      if (cloudData.secure_url) {
-        setForm({ ...form, images: [...form.images, cloudData.secure_url] });
+      const uploaded: string[] = [];
+
+      for (const file of Array.from(files)) {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('api_key', sigData.api_key);
+        formData.append('timestamp', sigData.timestamp);
+        formData.append('signature', sigData.signature);
+        formData.append('upload_preset', sigData.upload_preset);
+        const cloudRes = await fetch(`https://api.cloudinary.com/v1_1/${sigData.cloud_name}/image/upload`, {
+          method: 'POST',
+          body: formData,
+        });
+        const cloudData = await cloudRes.json();
+        if (cloudData.secure_url) uploaded.push(cloudData.secure_url);
+      }
+
+      if (uploaded.length) {
+        setForm((f) => ({ ...f, images: [...f.images, ...uploaded] }));
       }
     } catch {
       alert('Tải ảnh thất bại, vui lòng thử lại.');
     } finally {
       setUploading(false);
+      e.target.value = '';
     }
   };
 
@@ -98,7 +103,9 @@ export default function ProductsPage() {
       return;
     }
 
-    const sku = form.sku.trim() || `DSM-${Date.now()}`;
+    const ts = Date.now();
+    const sku = `DSM-${ts}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+    const barcode = `893${String(ts).slice(-10)}`;
     createMutation.mutate({
       name: form.name.trim(),
       description: form.description,
@@ -110,7 +117,7 @@ export default function ProductsPage() {
       isFeatured: form.isFeatured,
       variants: [{
         sku,
-        barcode: form.barcode.trim() || undefined,
+        barcode,
         attributes: {},
         price: form.salePrice,
         costPrice: form.costPrice || undefined,
@@ -210,7 +217,7 @@ export default function ProductsPage() {
 
       {drawerOpen && (
         <div className="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-sm">
-          <div className="animate-slide-in-right h-full w-full max-w-xl overflow-y-auto bg-white shadow-2xl">
+          <div className="animate-slide-in-right h-full w-full max-w-3xl overflow-y-auto bg-white shadow-2xl">
             <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-100 bg-white px-6 py-5">
               <div>
                 <h2 className="text-lg font-semibold">Tạo sản phẩm</h2>
@@ -227,16 +234,7 @@ export default function ProductsPage() {
                 <div>
                   <label className={labelCls}>Tên sản phẩm <span className="text-red-500">*</span></label>
                   <input className={inputCls} placeholder="VD: Nước rửa chén Sunlight 750ml" value={form.name} onChange={(e) => set('name', e.target.value)} />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className={labelCls}>Mã SKU</label>
-                    <input className={inputCls} placeholder="Tự sinh nếu để trống" value={form.sku} onChange={(e) => set('sku', e.target.value)} />
-                  </div>
-                  <div>
-                    <label className={labelCls}>Mã vạch</label>
-                    <input className={inputCls} placeholder="Barcode" value={form.barcode} onChange={(e) => set('barcode', e.target.value)} />
-                  </div>
+                  <p className="mt-1 text-[10px] text-[#9ca3af]">Mã SKU và mã vạch sẽ tự sinh khi lưu</p>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -302,13 +300,22 @@ export default function ProductsPage() {
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-[#9ca3af]">Hình ảnh</h3>
                 <div className="flex flex-wrap gap-2">
                   {form.images.map((img, i) => (
-                    <img key={i} src={img} alt="" className="h-16 w-16 rounded-[8px] border border-gray-200 object-cover" />
+                    <div key={i} className="group relative">
+                      <img src={img} alt="" className="h-20 w-20 rounded-[8px] border border-gray-200 object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => setForm((f) => ({ ...f, images: f.images.filter((_, idx) => idx !== i) }))}
+                        className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white opacity-0 transition-opacity group-hover:opacity-100"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
                   ))}
                 </div>
                 <label className="inline-flex cursor-pointer items-center gap-2 rounded-[10px] border border-dashed border-gray-300 bg-gray-50 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100">
                   <Upload className="h-4 w-4" />
-                  {uploading ? 'Đang tải lên...' : 'Tải ảnh mới'}
-                  <input type="file" className="hidden" accept="image/*" onChange={handleUpload} disabled={uploading} />
+                  {uploading ? 'Đang tải lên...' : 'Tải ảnh (có thể chọn nhiều)'}
+                  <input type="file" className="hidden" accept="image/*" multiple onChange={handleUpload} disabled={uploading} />
                 </label>
               </section>
 

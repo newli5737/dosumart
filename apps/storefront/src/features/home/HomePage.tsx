@@ -25,7 +25,7 @@ const categoryIcons: Record<string, React.ElementType> = {
 const BANNERS = [
   {
     id: 1,
-    image: '/assets/hero_grocery.png',
+    image: 'https://res.cloudinary.com/dn00btmpw/image/upload/v1782982295/d0ocynjittjuki4jpjco.jpg',
     tag: 'Siêu thị thu nhỏ',
     title: 'Tạp Hóa Việt',
     subtitle: 'Tiện lợi mỗi ngày',
@@ -35,7 +35,7 @@ const BANNERS = [
   },
   {
     id: 2,
-    image: '/assets/hero_spices.png',
+    image: 'https://res.cloudinary.com/dn00btmpw/image/upload/v1782982299/wvaktc01edu6gltawozq.jpg',
     tag: 'Đậm đà hương vị',
     title: 'Gia vị',
     subtitle: 'Bếp nhà Việt',

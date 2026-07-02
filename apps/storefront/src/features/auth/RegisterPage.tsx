@@ -1,19 +1,32 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Mail, Lock, User, UserPlus } from 'lucide-react';
+import { authApi } from '@dosumart/api';
+import { AUTH_QUERY_KEY } from '@dosumart/ui';
 
 export default function RegisterPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Simulate register
-    setTimeout(() => {
+    setError('');
+    setLoading(true);
+    try {
+      await authApi.register({ email, password, fullName: name });
+      await queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY });
       navigate('/');
-    }, 1000);
+    } catch {
+      setError('Không thể tạo tài khoản. Email có thể đã được sử dụng.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -50,6 +63,11 @@ export default function RegisterPage() {
           </div>
 
           <form className="mt-10 space-y-6" onSubmit={handleRegister}>
+            {error && (
+              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+                {error}
+              </div>
+            )}
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700">Họ và tên</label>
@@ -106,10 +124,11 @@ export default function RegisterPage() {
             <div>
               <button
                 type="submit"
-                className="flex w-full justify-center rounded-xl bg-[#16a34a] py-3 px-4 text-sm font-semibold text-white shadow-sm hover:bg-[#15803d] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#16a34a] transition-colors"
+                disabled={loading}
+                className="flex w-full justify-center rounded-xl bg-[#16a34a] py-3 px-4 text-sm font-semibold text-white shadow-sm hover:bg-[#15803d] disabled:opacity-60 transition-colors"
               >
                 <UserPlus className="mr-2 h-5 w-5" />
-                Đăng ký tài khoản
+                {loading ? 'Đang đăng ký...' : 'Đăng ký tài khoản'}
               </button>
             </div>
             

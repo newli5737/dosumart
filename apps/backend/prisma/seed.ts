@@ -1,4 +1,4 @@
-import { PrismaClient, Role, CouponType, InventoryTransactionType } from '@prisma/client';
+import { PrismaClient, Role, CouponType, InventoryTransactionType, OrderChannel, OrderStatus, PaymentMethod, PaymentStatus } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
@@ -136,6 +136,12 @@ async function main() {
     where: { email: 'thungan@dosumart.vn' },
     update: {},
     create: { email: 'thungan@dosumart.vn', password, fullName: 'Thu ngân Demo', role: Role.CASHIER },
+  });
+
+  const customer = await prisma.user.upsert({
+    where: { email: 'khach@dosumart.vn' },
+    update: {},
+    create: { email: 'khach@dosumart.vn', password, fullName: 'Khách hàng Demo', role: Role.CUSTOMER },
   });
 
   // Xóa các danh mục cũ nếu cần thiết hoặc chỉ tạo mới
@@ -474,6 +480,81 @@ async function main() {
       },
     },
   });
+
+  // Seed đơn hàng mẫu + doanh thu dashboard
+  const existingSales = await prisma.dailySales.count();
+  if (existingSales === 0) {
+    const variants = await prisma.productVariant.findMany({
+      take: 10,
+      include: { product: true },
+    });
+
+    for (let day = 13; day >= 0; day--) {
+      const ordersToday = 2 + Math.floor(Math.random() * 3);
+      for (let o = 0; o < ordersToday; o++) {
+        const createdAt = new Date();
+        createdAt.setDate(createdAt.getDate() - day);
+        createdAt.setHours(8 + Math.floor(Math.random() * 12), Math.floor(Math.random() * 60), 0, 0);
+
+        const channel = o % 3 === 0 ? OrderChannel.POS : OrderChannel.ONLINE;
+        const pick = variants[Math.floor(Math.random() * variants.length)];
+        const qty = 1 + Math.floor(Math.random() * 4);
+        const price = Number(pick.price);
+        const cost = Number(pick.costPrice || 0);
+        const subtotal = price * qty;
+        const shippingFee = channel === OrderChannel.ONLINE ? 15000 : 0;
+        const total = subtotal + shippingFee;
+        const code = `DH${createdAt.toISOString().slice(0, 10).replace(/-/g, '')}${String(day).padStart(2, '0')}${String(o).padStart(2, '0')}`;
+
+        await prisma.order.create({
+          data: {
+            code,
+            userId: channel === OrderChannel.ONLINE ? customer.id : undefined,
+            channel,
+            status: OrderStatus.COMPLETED,
+            paymentMethod: channel === OrderChannel.POS ? PaymentMethod.CASH : PaymentMethod.COD,
+            paymentStatus: PaymentStatus.PAID,
+            subtotal,
+            shippingFee,
+            total,
+            createdAt,
+            items: {
+              create: [{
+                variantId: pick.id,
+                productName: pick.product.name,
+                sku: pick.sku,
+                price,
+                costPrice: pick.costPrice,
+                quantity: qty,
+                lineTotal: subtotal,
+              }],
+            },
+          },
+        });
+
+        const salesDate = new Date(createdAt);
+        salesDate.setHours(0, 0, 0, 0);
+        const profit = subtotal - cost * qty;
+
+        await prisma.dailySales.upsert({
+          where: { date_channel: { date: salesDate, channel } },
+          create: {
+            date: salesDate,
+            channel,
+            orderCount: 1,
+            revenue: total,
+            profit,
+          },
+          update: {
+            orderCount: { increment: 1 },
+            revenue: { increment: total },
+            profit: { increment: profit },
+          },
+        });
+      }
+    }
+    console.log('Đã seed đơn hàng mẫu cho dashboard doanh thu.');
+  }
 
   console.log(`Seed hoàn tất! ${products.length} sản phẩm Tạp Hóa Việt.`);
   console.log('Tài khoản:');
