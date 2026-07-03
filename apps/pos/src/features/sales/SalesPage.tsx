@@ -81,6 +81,7 @@ export default function SalesPage() {
     cashReceived?: number;
     changeAmount?: number;
   } | null>(null);
+  const [pendingPrint, setPendingPrint] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
   const printRef = useRef<HTMLDivElement>(null);
   const { items, addItem, updateQuantity, removeItem, clear, subtotal, discount, setDiscount } = usePosStore();
@@ -129,11 +130,24 @@ export default function SalesPage() {
       clear();
       setShowPayment(false);
       setCashReceived('');
-      handlePrint();
+      setPendingPrint(true);
     },
   });
 
-  const handlePrint = useReactToPrint({ contentRef: printRef });
+  const handlePrint = useReactToPrint({
+    contentRef: printRef,
+    documentTitle: `Hoa-don-${lastOrder?.code || 'pos'}`,
+    pageStyle: '@page { size: 80mm auto; margin: 4mm; } body { margin: 0; }',
+  });
+
+  useEffect(() => {
+    if (!pendingPrint || !lastOrder) return;
+    const timer = window.setTimeout(() => {
+      handlePrint();
+      setPendingPrint(false);
+    }, 100);
+    return () => window.clearTimeout(timer);
+  }, [pendingPrint, lastOrder, handlePrint]);
 
   const addProduct = (p: PosProduct) => {
     addItem({
@@ -492,7 +506,10 @@ export default function SalesPage() {
         </PosModal>
       )}
 
-      <div className="hidden">
+      <div
+        aria-hidden="true"
+        style={{ position: 'fixed', left: '-9999px', top: 0, width: '80mm', pointerEvents: 'none' }}
+      >
         <Receipt ref={printRef} order={lastOrder} />
       </div>
     </div>
