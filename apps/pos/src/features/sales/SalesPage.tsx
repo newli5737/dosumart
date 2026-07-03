@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { useReactToPrint } from 'react-to-print';
 import {
   Search,
   LogOut,
@@ -18,7 +17,7 @@ import { usePosStore } from '@dosumart/stores';
 import { formatCurrency } from '@dosumart/utils';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@dosumart/ui';
-import Receipt from './Receipt';
+import { printReceipt, type ReceiptOrder } from './printReceipt';
 
 type PosProduct = {
   id: string;
@@ -71,19 +70,8 @@ export default function SalesPage() {
   const [showCloseShift, setShowCloseShift] = useState(false);
   const [closingCash, setClosingCash] = useState('');
   const [openingCash, setOpeningCash] = useState('');
-  const [lastOrder, setLastOrder] = useState<{
-    code?: string;
-    createdAt?: string;
-    items?: Array<{ productName: string; quantity: number; price: number; lineTotal: number }>;
-    subtotal?: number;
-    discount?: number;
-    total?: number;
-    cashReceived?: number;
-    changeAmount?: number;
-  } | null>(null);
-  const [pendingPrint, setPendingPrint] = useState(false);
+  const [lastOrder, setLastOrder] = useState<ReceiptOrder | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
-  const printRef = useRef<HTMLDivElement>(null);
   const { items, addItem, updateQuantity, removeItem, clear, subtotal, discount, setDiscount } = usePosStore();
 
   const { data: shift, refetch: refetchShift } = useQuery({
@@ -126,28 +114,14 @@ export default function SalesPage() {
   const createOrderMutation = useMutation({
     mutationFn: posApi.createOrder,
     onSuccess: (res) => {
-      setLastOrder(res.data);
+      const order = res.data as ReceiptOrder;
+      setLastOrder(order);
       clear();
       setShowPayment(false);
       setCashReceived('');
-      setPendingPrint(true);
+      printReceipt(order);
     },
   });
-
-  const handlePrint = useReactToPrint({
-    contentRef: printRef,
-    documentTitle: `Hoa-don-${lastOrder?.code || 'pos'}`,
-    pageStyle: '@page { size: 80mm auto; margin: 4mm; } body { margin: 0; }',
-  });
-
-  useEffect(() => {
-    if (!pendingPrint || !lastOrder) return;
-    const timer = window.setTimeout(() => {
-      handlePrint();
-      setPendingPrint(false);
-    }, 100);
-    return () => window.clearTimeout(timer);
-  }, [pendingPrint, lastOrder, handlePrint]);
 
   const addProduct = (p: PosProduct) => {
     addItem({
@@ -173,11 +147,14 @@ export default function SalesPage() {
         setShowCloseShift(false);
         setSearchFocused(false);
       }
-      if (e.ctrlKey && e.key === 'p') { e.preventDefault(); handlePrint(); }
+      if (e.ctrlKey && e.key === 'p') {
+        e.preventDefault();
+        if (lastOrder) printReceipt(lastOrder);
+      }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [items, handlePrint]);
+  }, [items, lastOrder]);
 
   const total = subtotal() - discount;
   const change = cashReceived ? Number(cashReceived) - total : 0;
@@ -505,13 +482,6 @@ export default function SalesPage() {
           />
         </PosModal>
       )}
-
-      <div
-        aria-hidden="true"
-        style={{ position: 'fixed', left: '-9999px', top: 0, width: '80mm', pointerEvents: 'none' }}
-      >
-        <Receipt ref={printRef} order={lastOrder} />
-      </div>
     </div>
   );
 }
