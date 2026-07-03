@@ -10,44 +10,45 @@ const perks = [
 
 export default function Footer() {
   return (
-    <footer className="mt-24 border-t border-gray-200 bg-[#111827] text-gray-300">
-      <div className="mx-auto max-w-[1440px] px-4 py-16">
+    <footer className="mt-auto border-t border-gray-800 bg-[#111827] text-gray-300">
+      <div className="mx-auto max-w-[1440px] px-4 py-16 sm:px-6">
         <div className="grid gap-10 md:grid-cols-4">
           <div className="md:col-span-1">
             <img src="/dosumart.png" alt="DoSuMart" className="h-12 w-auto brightness-0 invert" />
             <p className="mt-4 text-sm leading-relaxed text-gray-400">
-              Đối tác gia công phần mềm & chuyển đổi số — website từ 4 triệu, SaaS ERP/LMS/HR có demo.
+              Tạp hóa Việt trực tuyến — nhu yếu phẩm, gia vị, đồ uống chính hãng. Giao hàng nhanh, giá bình dân.
             </p>
           </div>
           <div>
             <h4 className="text-sm font-semibold text-white">Danh mục</h4>
             <ul className="mt-4 space-y-2.5 text-sm">
-              <li><Link to="/san-pham?category=thoi-trang" className="hover:text-white transition-colors">Thời trang</Link></li>
-              <li><Link to="/san-pham?category=dien-tu" className="hover:text-white transition-colors">Điện tử</Link></li>
-              <li><Link to="/san-pham?category=gia-dung" className="hover:text-white transition-colors">Gia dụng</Link></li>
-              <li><Link to="/san-pham?category=my-pham" className="hover:text-white transition-colors">Mỹ phẩm</Link></li>
+              <li><Link to="/san-pham?category=thuc-pham" className="transition-colors hover:text-[#f97316]">Thực phẩm khô</Link></li>
+              <li><Link to="/san-pham?category=gia-vi" className="transition-colors hover:text-[#f97316]">Gia vị</Link></li>
+              <li><Link to="/san-pham?category=do-uong" className="transition-colors hover:text-[#f97316]">Đồ uống</Link></li>
+              <li><Link to="/san-pham?category=an-vat" className="transition-colors hover:text-[#f97316]">Đồ ăn vặt</Link></li>
+              <li><Link to="/san-pham?category=hoa-pham" className="transition-colors hover:text-[#f97316]">Hóa mỹ phẩm</Link></li>
             </ul>
           </div>
           <div>
             <h4 className="text-sm font-semibold text-white">Hỗ trợ</h4>
-            <ul className="mt-4 space-y-2.5 text-sm">
-              <li><span className="text-gray-400">Chính sách đổi trả</span></li>
-              <li><span className="text-gray-400">Vận chuyển & giao hàng</span></li>
-              <li><span className="text-gray-400">Thanh toán</span></li>
-              <li><span className="text-gray-400">Liên hệ</span></li>
+            <ul className="mt-4 space-y-2.5 text-sm text-gray-400">
+              <li>Chính sách đổi trả trong 7 ngày</li>
+              <li>Miễn phí ship đơn từ 500.000đ</li>
+              <li>Thanh toán COD & chuyển khoản</li>
+              <li><Link to="/dang-nhap" className="transition-colors hover:text-[#f97316]">Tài khoản & đơn hàng</Link></li>
             </ul>
           </div>
           <div>
             <h4 className="text-sm font-semibold text-white">Liên hệ</h4>
             <ul className="mt-4 space-y-2.5 text-sm text-gray-400">
-              <li>Số 03, Ngách 72/59 Đường Tây Mỗ, Phường Tây Mỗ, TP Hà Nội</li>
-              <li>Hotline: 0346 437 915</li>
-              <li>Email: support@dosutech.site</li>
+              <li>123 Nguyễn Huệ, Quận 1, TP.HCM</li>
+              <li>Hotline: 028 1234 5678</li>
+              <li>Email: hotro@dosumart.vn</li>
             </ul>
           </div>
         </div>
         <div className="mt-12 border-t border-gray-800 pt-8 text-center text-xs text-gray-500">
-          © {new Date().getFullYear()} DoSuMart. Bảo lưu mọi quyền.
+          © {new Date().getFullYear()} DoSuMart — Tạp Hóa Việt. Bảo lưu mọi quyền.
         </div>
       </div>
     </footer>
@@ -60,7 +61,7 @@ export function TrustBar() {
       <div className="mx-auto grid max-w-[1440px] grid-cols-2 gap-6 px-4 py-8 md:grid-cols-4 md:py-10">
         {perks.map(({ icon: Icon, title, desc }) => (
           <div key={title} className="flex items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-orange-50 text-[#f97316]">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-[#f97316]">
               <Icon className="h-5 w-5" />
             </div>
             <div>

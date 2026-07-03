@@ -34,7 +34,7 @@ export default function ProductCard({ product, showAddButton = true }: ProductCa
   return (
     <Link
       to={`/san-pham/${product.slug}`}
-      className="group flex h-full flex-col overflow-hidden rounded-[10px] border border-gray-200/80 bg-white transition-all duration-200 hover:-translate-y-0.5 hover:border-orange-200 hover:shadow-md"
+      className="group flex h-full flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-orange-200 hover:shadow-lg"
     >
       <div className="relative aspect-square overflow-hidden bg-[#f5f5f5]">
         <img
@@ -108,7 +108,7 @@ export default function ProductCard({ product, showAddButton = true }: ProductCa
 
 export function ProductCardSkeleton() {
   return (
-    <div className="overflow-hidden rounded-[10px] border border-gray-200 bg-white">
+    <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
       <div className="aspect-square animate-pulse bg-gray-100" />
       <div className="space-y-2 p-4">
         <div className="h-3 w-16 animate-pulse rounded bg-gray-100" />

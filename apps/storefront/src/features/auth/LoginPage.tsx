@@ -29,7 +29,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
+    <div className="flex min-h-screen items-center justify-center bg-[#f4f6f8] px-4 py-12 sm:px-6 lg:px-8">
       <div className="w-full max-w-4xl overflow-hidden rounded-3xl bg-white shadow-2xl flex">
         <div className="hidden w-1/2 bg-gradient-to-br from-orange-400 to-[#f97316] p-12 text-white lg:flex lg:flex-col lg:justify-between relative overflow-hidden">
           <div className="absolute inset-0 bg-[url('https://res.cloudinary.com/dn00btmpw/image/upload/v1782982295/d0ocynjittjuki4jpjco.jpg')] bg-cover bg-center opacity-30 mix-blend-overlay" />

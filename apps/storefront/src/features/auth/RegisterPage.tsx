@@ -30,7 +30,7 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
+    <div className="flex min-h-screen items-center justify-center bg-[#f4f6f8] px-4 py-12 sm:px-6 lg:px-8">
       <div className="w-full max-w-4xl overflow-hidden rounded-3xl bg-white shadow-2xl flex flex-row-reverse">
         {/* Right Side: Image/Banner (Reversed for Register) */}
         <div className="hidden w-1/2 bg-gradient-to-bl from-green-500 to-[#16a34a] p-12 text-white lg:flex lg:flex-col lg:justify-between relative overflow-hidden">
