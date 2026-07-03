@@ -55,8 +55,8 @@ function PosModal({
             <X className="h-5 w-5" />
           </button>
         </div>
-        {children}
-        <div className="mt-5 flex gap-2">{actions}</div>
+        {children && <div className="min-h-0 max-h-[55vh] overflow-y-auto pr-1">{children}</div>}
+        <div className="mt-5 flex shrink-0 flex-col gap-2 sm:flex-row">{actions}</div>
       </div>
     </div>
   );
@@ -70,7 +70,8 @@ export default function SalesPage() {
   const [cashReceived, setCashReceived] = useState('');
   const [showPayment, setShowPayment] = useState(false);
   const [paymentMode, setPaymentMode] = useState<'CASH' | 'QR'>('CASH');
-  const [qrOrder, setQrOrder] = useState<ReceiptOrder | null>(null);
+  const [pendingQrOrders, setPendingQrOrders] = useState<ReceiptOrder[]>([]);
+  const [qrModalOrderId, setQrModalOrderId] = useState<string | null>(null);
   const [showCloseShift, setShowCloseShift] = useState(false);
   const [closingCash, setClosingCash] = useState('');
   const [openingCash, setOpeningCash] = useState('');
@@ -104,6 +105,80 @@ export default function SalesPage() {
 
   const productList: PosProduct[] = products?.data || [];
 
+  const qrModalOrder = qrModalOrderId
+    ? (pendingQrOrders.find((o) => o.id === qrModalOrderId) ?? null)
+    : null;
+
+  const mapShiftOrder = (o: {
+    id: string;
+    code: string;
+    total: unknown;
+    paymentMethod?: string;
+    paymentStatus?: string;
+    subtotal?: unknown;
+    discount?: unknown;
+    createdAt?: string;
+    items?: Array<{
+      productName: string;
+      sku?: string;
+      quantity: number;
+      price: unknown;
+      lineTotal: unknown;
+    }>;
+  }): ReceiptOrder => ({
+    id: o.id,
+    code: o.code,
+    total: Number(o.total),
+    subtotal: o.subtotal != null ? Number(o.subtotal) : undefined,
+    discount: o.discount != null ? Number(o.discount) : undefined,
+    paymentMethod: o.paymentMethod,
+    createdAt: o.createdAt,
+    items: o.items?.map((i) => ({
+      productName: i.productName,
+      sku: i.sku,
+      quantity: i.quantity,
+      price: Number(i.price),
+      lineTotal: Number(i.lineTotal),
+    })),
+  });
+
+  useEffect(() => {
+    const orders = (shift?.data?.orders ?? []) as Array<{
+      id: string;
+      code: string;
+      total: unknown;
+      paymentMethod?: string;
+      paymentStatus?: string;
+      subtotal?: unknown;
+      discount?: unknown;
+      createdAt?: string;
+      items?: Array<{
+        productName: string;
+        sku?: string;
+        quantity: number;
+        price: unknown;
+        lineTotal: unknown;
+      }>;
+    }>;
+    const unpaidQr = orders
+      .filter((o) => o.paymentMethod === 'BANK_TRANSFER' && o.paymentStatus === 'UNPAID')
+      .map(mapShiftOrder);
+    if (unpaidQr.length) {
+      setPendingQrOrders((prev) => {
+        const byId = new Map<string, ReceiptOrder>();
+        unpaidQr.forEach((o) => {
+          if (o.id) byId.set(o.id, o);
+        });
+        prev.forEach((o) => {
+          if (o.id && !byId.has(o.id)) byId.set(o.id, o);
+        });
+        return Array.from(byId.values()).sort(
+          (a, b) => new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime(),
+        );
+      });
+    }
+  }, [shift?.data?.orders]);
+
   const openShiftMutation = useMutation({
     mutationFn: (cash: number) => posApi.openShift(cash),
     onSuccess: () => {
@@ -127,11 +202,16 @@ export default function SalesPage() {
       const order = res.data as ReceiptOrder;
       const isQr = order.paymentMethod === 'BANK_TRANSFER';
       if (isQr) {
-        setQrOrder(order);
+        setPendingQrOrders((prev) => {
+          if (order.id && prev.some((p) => p.id === order.id)) return prev;
+          return [order, ...prev];
+        });
+        setQrModalOrderId(order.id ?? null);
         clear();
         setShowPayment(false);
         setCashReceived('');
         setPaymentMode('CASH');
+        refetchShift();
         return;
       }
       setLastOrder(order);
@@ -149,14 +229,20 @@ export default function SalesPage() {
     mutationFn: (id: string) => posApi.confirmPayment(id),
     onSuccess: (res) => {
       const order = res.data as ReceiptOrder;
-      setQrOrder(null);
+      setPendingQrOrders((prev) => prev.filter((p) => p.id !== order.id));
+      setQrModalOrderId((id) => (id === order.id ? null : id));
       setLastOrder(order);
       printReceipt(order, {
         store: storeSettings?.data,
         cashier: user?.fullName || user?.email,
       });
+      refetchShift();
     },
   });
+
+  const confirmPendingQr = (orderId: string) => {
+    confirmPaymentMutation.mutate(orderId);
+  };
 
   const addProduct = (p: PosProduct) => {
     addItem({
@@ -176,11 +262,17 @@ export default function SalesPage() {
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'F2') { e.preventDefault(); searchRef.current?.focus(); }
       if (e.key === 'F4') { e.preventDefault(); if (items.length) setShowPayment(true); }
+      if (e.key === 'F6') {
+        e.preventDefault();
+        const target = qrModalOrder ?? pendingQrOrders[0];
+        if (target?.id) confirmPendingQr(target.id);
+      }
       if (e.key === 'Escape') {
         e.preventDefault();
         setShowPayment(false);
         setShowCloseShift(false);
         setSearchFocused(false);
+        setQrModalOrderId(null);
       }
       if (e.ctrlKey && e.key === 'p') {
         e.preventDefault();
@@ -194,7 +286,7 @@ export default function SalesPage() {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [items, lastOrder, storeSettings, user]);
+  }, [items, lastOrder, storeSettings, user, qrModalOrder, pendingQrOrders]);
 
   const total = subtotal() - discount;
   const change = cashReceived ? Number(cashReceived) - total : 0;
@@ -257,6 +349,7 @@ export default function SalesPage() {
           <div className="hidden items-center gap-3 text-[11px] text-gray-400 md:flex">
             <span className="rounded-md bg-white/5 px-2 py-1">F2 Tìm</span>
             <span className="rounded-md bg-white/5 px-2 py-1">F4 Thanh toán</span>
+            <span className="rounded-md bg-white/5 px-2 py-1">F6 Nhận CK</span>
             <span className="rounded-md bg-white/5 px-2 py-1">ESC Hủy</span>
           </div>
           <button
@@ -411,6 +504,49 @@ export default function SalesPage() {
           </div>
 
           <div className="border-t border-gray-200 bg-white p-4">
+            {pendingQrOrders.length > 0 && (
+              <div className="mb-4 rounded-xl border-2 border-amber-300 bg-amber-50 p-3">
+                <p className="text-xs font-bold uppercase tracking-wide text-amber-900">
+                  Đơn chờ chuyển khoản ({pendingQrOrders.length})
+                </p>
+                <p className="mt-0.5 text-xs text-amber-800">
+                  Đóng QR vẫn giữ đơn — xác nhận sau để in hóa đơn (F6)
+                </p>
+                <ul className="mt-2 space-y-2">
+                  {pendingQrOrders.map((order) => (
+                    <li
+                      key={order.id}
+                      className="flex items-center justify-between gap-2 rounded-lg border border-amber-200 bg-white px-3 py-2"
+                    >
+                      <div className="min-w-0">
+                        <span className="font-mono text-sm font-bold text-[#111827]">{order.code}</span>
+                        <span className="ml-2 text-sm font-semibold text-[#f97316]">
+                          {formatCurrency(order.total ?? 0)}
+                        </span>
+                      </div>
+                      <div className="flex shrink-0 gap-1">
+                        <button
+                          type="button"
+                          className="h-8 rounded-lg border border-gray-200 px-2.5 text-xs font-semibold hover:bg-gray-50"
+                          onClick={() => order.id && setQrModalOrderId(order.id)}
+                        >
+                          QR
+                        </button>
+                        <button
+                          type="button"
+                          disabled={confirmPaymentMutation.isPending}
+                          className="h-8 rounded-lg bg-[#16a34a] px-2.5 text-xs font-semibold text-white hover:bg-green-700 disabled:opacity-60"
+                          onClick={() => order.id && confirmPendingQr(order.id)}
+                        >
+                          Nhận tiền
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
             <div className="space-y-2 text-sm">
               <div className="flex justify-between text-[#6b7280]">
                 <span>Tạm tính</span>
@@ -536,29 +672,36 @@ export default function SalesPage() {
         </div>
       </div>
 
-      {qrOrder && storeSettings?.data?.sepay?.accountNumber && (
+      {qrModalOrderId && qrModalOrder && storeSettings?.data?.sepay?.accountNumber && (
         <PosModal
           title="Thanh toán QR"
-          description={`Mã đơn ${qrOrder.code} — nội dung CK khi chuyển khoản`}
-          onClose={() => setQrOrder(null)}
+          description={`Mã đơn ${qrModalOrder.code} — nội dung CK khi chuyển khoản`}
+          onClose={() => setQrModalOrderId(null)}
           actions={
-            <button
-              type="button"
-              onClick={() => setQrOrder(null)}
-              className="h-11 flex-1 rounded-xl border border-gray-200 text-sm font-medium hover:bg-gray-50"
-            >
-              Đóng (chưa nhận tiền)
-            </button>
+            <>
+              <button
+                type="button"
+                disabled={confirmPaymentMutation.isPending}
+                onClick={() => qrModalOrder.id && confirmPendingQr(qrModalOrder.id)}
+                className="h-12 flex-1 rounded-xl bg-[#16a34a] text-sm font-bold text-white hover:bg-green-700 disabled:opacity-60"
+              >
+                {confirmPaymentMutation.isPending ? 'Đang xác nhận...' : 'Đã nhận tiền — In hóa đơn'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setQrModalOrderId(null)}
+                className="h-12 flex-1 rounded-xl border border-gray-200 text-sm font-medium hover:bg-gray-50"
+              >
+                Thu sau
+              </button>
+            </>
           }
         >
           <QrPaymentPanel
-            orderCode={qrOrder.code ?? ''}
-            amount={qrOrder.total ?? 0}
+            orderCode={qrModalOrder.code ?? ''}
+            amount={qrModalOrder.total ?? 0}
             sepay={storeSettings.data.sepay as SepayConfig}
-            showConfirm
-            confirming={confirmPaymentMutation.isPending}
-            onConfirm={() => qrOrder.id && confirmPaymentMutation.mutate(qrOrder.id)}
-            hint="Kiểm tra sao kê SePay trước khi xác nhận."
+            hint="Kiểm tra sao kê SePay, sau đó bấm «Đã nhận tiền» để in bill. Đóng modal vẫn giữ đơn ở panel bên phải."
           />
         </PosModal>
       )}

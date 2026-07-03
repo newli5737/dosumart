@@ -58,7 +58,12 @@ export class PosService {
   async getCurrentShift(cashierId: string) {
     const shift = await this.prisma.shift.findFirst({
       where: { cashierId, closedAt: null },
-      include: { orders: true },
+      include: {
+        orders: {
+          include: { items: true },
+          orderBy: { createdAt: 'desc' },
+        },
+      },
     });
     return { data: shift };
   }
