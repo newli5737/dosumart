@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useState, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   User,
@@ -12,9 +12,13 @@ import {
   Phone,
   Receipt,
   Sparkles,
+  MapPin,
+  Lock,
+  ChevronLeft,
+  ChevronRight as ChevronRightIcon,
   ArrowRight,
 } from 'lucide-react';
-import { ordersApi } from '@dosumart/api';
+import { ordersApi, authApi } from '@dosumart/api';
 import { formatCurrency, formatDate } from '@dosumart/utils';
 import { ORDER_STATUS_LABELS, PAYMENT_METHOD_LABELS } from '@dosumart/constants';
 import { Button, Badge, Spinner, useAuth } from '@dosumart/ui';
@@ -117,21 +121,168 @@ function OrderCard({ order }: { order: Order }) {
   );
 }
 
+const ORDER_PAGE_SIZE = 5;
+
+const inputCls =
+  'h-11 w-full rounded-xl border border-gray-200 bg-[#fafafa] px-4 text-sm focus:border-[#f97316] focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-100';
+
+function ProfilePanel({ user }: { user: { fullName?: string; email?: string } | null }) {
+  const queryClient = useQueryClient();
+  const [pwd, setPwd] = useState({ current: '', next: '', confirm: '' });
+  const [pwdMsg, setPwdMsg] = useState('');
+  const [addrForm, setAddrForm] = useState({
+    recipient: '', phone: '', province: '', district: '', ward: '', detail: '',
+  });
+  const [addrMsg, setAddrMsg] = useState('');
+
+  const { data: addresses } = useQuery({
+    queryKey: ['addresses'],
+    queryFn: authApi.addresses,
+  });
+
+  const defaultAddr = (addresses?.data || []).find((a: { isDefault: boolean }) => a.isDefault)
+    || (addresses?.data || [])[0];
+
+  useEffect(() => {
+    if (defaultAddr && !addrForm.recipient) {
+      setAddrForm({
+        recipient: defaultAddr.recipient,
+        phone: defaultAddr.phone,
+        province: defaultAddr.province,
+        district: defaultAddr.district,
+        ward: defaultAddr.ward,
+        detail: defaultAddr.detail,
+      });
+    }
+  }, [defaultAddr]);
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (pwd.next !== pwd.confirm) {
+      setPwdMsg('Mật khẩu xác nhận không khớp');
+      return;
+    }
+    try {
+      await authApi.changePassword({ currentPassword: pwd.current, newPassword: pwd.next });
+      setPwdMsg('Đổi mật khẩu thành công!');
+      setPwd({ current: '', next: '', confirm: '' });
+    } catch {
+      setPwdMsg('Mật khẩu hiện tại không đúng');
+    }
+  };
+
+  const handleSaveAddress = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      if (defaultAddr) {
+        await authApi.updateAddress(defaultAddr.id, { ...addrForm, isDefault: true });
+      } else {
+        await authApi.createAddress({ ...addrForm, isDefault: true });
+      }
+      await queryClient.invalidateQueries({ queryKey: ['addresses'] });
+      setAddrMsg('Đã lưu địa chỉ mặc định');
+    } catch {
+      setAddrMsg('Không thể lưu địa chỉ');
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm sm:p-8">
+        <h2 className="text-lg font-bold text-[#111827]">Thông tin cá nhân</h2>
+        <p className="mt-1 text-sm text-[#9ca3af]">Thông tin tài khoản của bạn</p>
+        <div className="mt-6 grid gap-4 sm:grid-cols-2">
+          <InfoField icon={User} label="Họ và tên" value={user?.fullName} />
+          <InfoField icon={Mail} label="Email" value={user?.email} />
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm sm:p-8">
+        <div className="mb-5 flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-50">
+            <MapPin className="h-5 w-5 text-[#f97316]" />
+          </div>
+          <div>
+            <h3 className="font-bold text-[#111827]">Địa chỉ mặc định</h3>
+            <p className="text-xs text-[#9ca3af]">Dùng khi thanh toán nhanh hơn</p>
+          </div>
+        </div>
+        <form className="grid gap-3 sm:grid-cols-2" onSubmit={handleSaveAddress}>
+          <input className={inputCls} placeholder="Người nhận *" required value={addrForm.recipient} onChange={(e) => setAddrForm({ ...addrForm, recipient: e.target.value })} />
+          <input className={inputCls} placeholder="Số điện thoại *" required value={addrForm.phone} onChange={(e) => setAddrForm({ ...addrForm, phone: e.target.value })} />
+          <input className={inputCls} placeholder="Tỉnh/Thành phố" value={addrForm.province} onChange={(e) => setAddrForm({ ...addrForm, province: e.target.value })} />
+          <input className={inputCls} placeholder="Quận/Huyện" value={addrForm.district} onChange={(e) => setAddrForm({ ...addrForm, district: e.target.value })} />
+          <input className={inputCls} placeholder="Phường/Xã" value={addrForm.ward} onChange={(e) => setAddrForm({ ...addrForm, ward: e.target.value })} />
+          <input className={`${inputCls} sm:col-span-2`} placeholder="Địa chỉ chi tiết *" required value={addrForm.detail} onChange={(e) => setAddrForm({ ...addrForm, detail: e.target.value })} />
+          {addrMsg && <p className="sm:col-span-2 text-sm text-green-600">{addrMsg}</p>}
+          <button type="submit" className="sm:col-span-2 h-11 rounded-xl bg-[#f97316] text-sm font-semibold text-white hover:bg-[#ea580c]">
+            Lưu địa chỉ mặc định
+          </button>
+        </form>
+      </div>
+
+      <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm sm:p-8">
+        <div className="mb-5 flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100">
+            <Lock className="h-5 w-5 text-[#374151]" />
+          </div>
+          <div>
+            <h3 className="font-bold text-[#111827]">Đổi mật khẩu</h3>
+            <p className="text-xs text-[#9ca3af]">Bảo mật tài khoản của bạn</p>
+          </div>
+        </div>
+        <form className="max-w-md space-y-3" onSubmit={handleChangePassword}>
+          <input type="password" className={inputCls} placeholder="Mật khẩu hiện tại" required value={pwd.current} onChange={(e) => setPwd({ ...pwd, current: e.target.value })} />
+          <input type="password" className={inputCls} placeholder="Mật khẩu mới (tối thiểu 6 ký tự)" required minLength={6} value={pwd.next} onChange={(e) => setPwd({ ...pwd, next: e.target.value })} />
+          <input type="password" className={inputCls} placeholder="Xác nhận mật khẩu mới" required value={pwd.confirm} onChange={(e) => setPwd({ ...pwd, confirm: e.target.value })} />
+          {pwdMsg && <p className={`text-sm ${pwdMsg.includes('thành công') ? 'text-green-600' : 'text-red-500'}`}>{pwdMsg}</p>}
+          <button type="submit" className="h-11 rounded-xl border border-gray-200 px-6 text-sm font-semibold text-[#374151] hover:bg-gray-50">
+            Cập nhật mật khẩu
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function InfoField({ icon: Icon, label, value }: { icon: typeof User; label: string; value?: string }) {
+  return (
+    <div className="flex items-start gap-3 rounded-xl border border-gray-100 bg-[#fafafa] p-4">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white shadow-sm">
+        <Icon className="h-5 w-5 text-[#f97316]" />
+      </div>
+      <div>
+        <p className="text-xs font-medium uppercase tracking-wider text-[#9ca3af]">{label}</p>
+        <p className="mt-1 font-semibold text-[#111827]">{value || '—'}</p>
+      </div>
+    </div>
+  );
+}
+
 export default function AccountPage() {
   const { user, isAuthenticated, isLoading, logout } = useAuth();
   const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>('orders');
+  const [orderPage, setOrderPage] = useState(1);
+
+  const { data: ordersStats } = useQuery({
+    queryKey: ['my-orders-stats'],
+    queryFn: () => ordersApi.list({ page: 1, limit: 100 }),
+    enabled: isAuthenticated,
+  });
 
   const { data: orders, isLoading: ordersLoading } = useQuery({
-    queryKey: ['my-orders'],
-    queryFn: () => ordersApi.list(),
+    queryKey: ['my-orders', orderPage],
+    queryFn: () => ordersApi.list({ page: orderPage, limit: ORDER_PAGE_SIZE }),
     enabled: isAuthenticated,
   });
 
   const orderList: Order[] = orders?.data || [];
-  const totalSpent = orderList
-    .filter((o) => o.status === 'COMPLETED')
-    .reduce((s, o) => s + Number(o.total), 0);
+  const totalOrders = ordersStats?.meta?.total ?? orderList.length;
+  const totalPages = orders?.meta?.totalPages ?? 1;
+  const totalSpent = (ordersStats?.data || [])
+    .filter((o: Order) => o.status === 'COMPLETED')
+    .reduce((s: number, o: Order) => s + Number(o.total), 0);
 
   const handleLogout = async () => {
     await logout();
@@ -213,7 +364,7 @@ export default function AccountPage() {
               </div>
               <div>
                 <p className="text-xs text-[#9ca3af]">Tổng đơn hàng</p>
-                <p className="text-xl font-bold text-[#111827]">{orderList.length}</p>
+                <p className="text-xl font-bold text-[#111827]">{totalOrders}</p>
               </div>
             </div>
           </div>
@@ -274,46 +425,7 @@ export default function AccountPage() {
 
           {/* Main content */}
           <div>
-            {tab === 'profile' && (
-              <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm sm:p-8">
-                <h2 className="text-lg font-bold text-[#111827]">Thông tin cá nhân</h2>
-                <p className="mt-1 text-sm text-[#9ca3af]">Quản lý thông tin tài khoản của bạn</p>
-
-                <div className="mt-8 space-y-6">
-                  <div className="flex items-start gap-4 rounded-xl border border-gray-100 bg-[#fafafa] p-4">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white shadow-sm">
-                      <User className="h-5 w-5 text-[#f97316]" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-medium uppercase tracking-wider text-[#9ca3af]">Họ và tên</p>
-                      <p className="mt-1 text-base font-semibold text-[#111827]">{user?.fullName}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-4 rounded-xl border border-gray-100 bg-[#fafafa] p-4">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white shadow-sm">
-                      <Mail className="h-5 w-5 text-[#f97316]" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-medium uppercase tracking-wider text-[#9ca3af]">Email</p>
-                      <p className="mt-1 text-base font-semibold text-[#111827]">{user?.email}</p>
-                    </div>
-                  </div>
-
-                  {user?.phone && (
-                    <div className="flex items-start gap-4 rounded-xl border border-gray-100 bg-[#fafafa] p-4">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white shadow-sm">
-                        <Phone className="h-5 w-5 text-[#f97316]" />
-                      </div>
-                      <div>
-                        <p className="text-xs font-medium uppercase tracking-wider text-[#9ca3af]">Số điện thoại</p>
-                        <p className="mt-1 text-base font-semibold text-[#111827]">{user.phone}</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
+            {tab === 'profile' && <ProfilePanel user={user} />}
 
             {tab === 'orders' && (
               <div>
@@ -321,8 +433,8 @@ export default function AccountPage() {
                   <div>
                     <h2 className="text-lg font-bold text-[#111827]">Lịch sử đơn hàng</h2>
                     <p className="mt-1 text-sm text-[#9ca3af]">
-                      {orderList.length > 0
-                        ? `${orderList.length} đơn hàng`
+                      {totalOrders > 0
+                        ? `${totalOrders} đơn hàng · Trang ${orderPage}/${totalPages}`
                         : 'Theo dõi trạng thái đơn hàng của bạn'}
                     </p>
                   </div>
@@ -353,11 +465,36 @@ export default function AccountPage() {
                     </Link>
                   </div>
                 ) : (
-                  <div className="space-y-4">
-                    {orderList.map((order) => (
-                      <OrderCard key={order.id} order={order} />
-                    ))}
-                  </div>
+                  <>
+                    <div className="space-y-4">
+                      {orderList.map((order) => (
+                        <OrderCard key={order.id} order={order} />
+                      ))}
+                    </div>
+                    {totalPages > 1 && (
+                      <div className="mt-6 flex items-center justify-center gap-3">
+                        <button
+                          type="button"
+                          disabled={orderPage <= 1}
+                          onClick={() => setOrderPage((p) => p - 1)}
+                          className="flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 bg-white disabled:opacity-40"
+                        >
+                          <ChevronLeft className="h-4 w-4" />
+                        </button>
+                        <span className="text-sm text-[#6b7280]">
+                          Trang {orderPage} / {totalPages}
+                        </span>
+                        <button
+                          type="button"
+                          disabled={orderPage >= totalPages}
+                          onClick={() => setOrderPage((p) => p + 1)}
+                          className="flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 bg-white disabled:opacity-40"
+                        >
+                          <ChevronRightIcon className="h-4 w-4" />
+                        </button>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             )}

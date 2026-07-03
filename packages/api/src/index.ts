@@ -59,6 +59,14 @@ export const authApi = {
     api.post('/auth/register', data).then((r) => r.data),
   logout: () => api.post('/auth/logout').then((r) => r.data),
   me: () => api.get('/auth/me').then((r) => r.data),
+  changePassword: (data: { currentPassword: string; newPassword: string }) =>
+    api.post('/auth/change-password', data).then((r) => r.data),
+  addresses: () => api.get('/auth/addresses').then((r) => r.data),
+  createAddress: (data: Record<string, unknown>) =>
+    api.post('/auth/addresses', data).then((r) => r.data),
+  updateAddress: (id: string, data: Record<string, unknown>) =>
+    api.patch(`/auth/addresses/${id}`, data).then((r) => r.data),
+  deleteAddress: (id: string) => api.delete(`/auth/addresses/${id}`).then((r) => r.data),
 };
 
 export const productsApi = {
@@ -117,4 +125,18 @@ export const reportsApi = {
   inventory: () => api.get('/admin/reports/inventory').then((r) => r.data),
   customers: (params?: Record<string, string | number>) =>
     api.get('/admin/customers', { params }).then((r) => r.data),
+};
+
+export const inventoryApi = {
+  importStock: (
+    variantId: string,
+    data: { type: string; quantity: number; note?: string; supplierId?: string; unitCost?: number },
+  ) => api.post(`/admin/variants/${variantId}/stock`, data).then((r) => r.data),
+  stockLogs: (params?: Record<string, string | number>) =>
+    api.get('/admin/stock-logs', { params }).then((r) => r.data),
+  suppliers: () => api.get('/admin/suppliers').then((r) => r.data),
+  createSupplier: (data: Record<string, unknown>) =>
+    api.post('/admin/suppliers', data).then((r) => r.data),
+  updateSupplier: (id: string, data: Record<string, unknown>) =>
+    api.patch(`/admin/suppliers/${id}`, data).then((r) => r.data),
 };

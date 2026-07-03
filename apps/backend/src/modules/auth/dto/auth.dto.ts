@@ -1,4 +1,4 @@
-import { IsEmail, IsString, MinLength, IsOptional } from 'class-validator';
+import { IsEmail, IsString, MinLength, IsOptional, IsBoolean } from 'class-validator';
 
 export class RegisterDto {
   @IsEmail({}, { message: 'Email không hợp lệ' })
@@ -43,4 +43,37 @@ export class ResetPasswordDto {
   @IsString()
   @MinLength(6)
   newPassword: string;
+}
+
+export class ChangePasswordDto {
+  @IsString()
+  currentPassword: string;
+
+  @IsString()
+  @MinLength(6, { message: 'Mật khẩu mới phải có ít nhất 6 ký tự' })
+  newPassword: string;
+}
+
+export class AddressDto {
+  @IsString()
+  recipient: string;
+
+  @IsString()
+  phone: string;
+
+  @IsString()
+  province: string;
+
+  @IsString()
+  district: string;
+
+  @IsString()
+  ward: string;
+
+  @IsString()
+  detail: string;
+
+  @IsOptional()
+  @IsBoolean()
+  isDefault?: boolean;
 }

@@ -14,6 +14,8 @@ export class InventoryService {
     note?: string;
     createdBy?: string;
     warehouseId?: string;
+    supplierId?: string;
+    unitCost?: number;
   }) {
     const warehouse = data.warehouseId
       ? await this.prisma.warehouse.findFirst({ where: { id: data.warehouseId, deletedAt: null } })
@@ -50,8 +52,17 @@ export class InventoryService {
           quantity: qty,
           note: data.note,
           createdBy: data.createdBy,
+          supplierId: data.supplierId,
+          unitCost: data.unitCost,
         },
       });
+
+      if (data.type === 'IMPORT' && data.unitCost != null) {
+        await tx.productVariant.update({
+          where: { id: data.variantId },
+          data: { costPrice: data.unitCost },
+        });
+      }
 
       await tx.inventory.upsert({
         where: { warehouseId_variantId: { warehouseId: warehouse.id, variantId: data.variantId } },
@@ -121,12 +132,60 @@ export class InventoryService {
         include: {
           variant: { include: { product: { select: { name: true } } } },
           warehouse: { select: { name: true, code: true } },
+          supplier: { select: { id: true, name: true, code: true } },
         },
       }),
       this.prisma.inventoryTransaction.count({ where }),
     ]);
 
-    return { data: items, meta: paginationMeta(total, page, limit) };
+    return {
+      data: items.map((i) => ({
+        id: i.id,
+        variantId: i.variantId,
+        sku: i.variant.sku,
+        productName: i.variant.product.name,
+        warehouse: i.warehouse.name,
+        quantity: i.quantity,
+        type: i.type,
+        unitCost: i.unitCost ? Number(i.unitCost) : null,
+        supplier: i.supplier ? { id: i.supplier.id, name: i.supplier.name } : null,
+        note: i.note,
+        createdAt: i.createdAt,
+      })),
+      meta: paginationMeta(total, page, limit),
+    };
+  }
+
+  async findSuppliers() {
+    const items = await this.prisma.supplier.findMany({
+      where: { deletedAt: null },
+      orderBy: { name: 'asc' },
+    });
+    return { data: items };
+  }
+
+  async createSupplier(data: {
+    name: string;
+    code: string;
+    phone?: string;
+    email?: string;
+    address?: string;
+    contactName?: string;
+  }) {
+    const item = await this.prisma.supplier.create({ data });
+    return { data: item };
+  }
+
+  async updateSupplier(id: string, data: Partial<{
+    name: string;
+    phone: string;
+    email: string;
+    address: string;
+    contactName: string;
+    isActive: boolean;
+  }>) {
+    const item = await this.prisma.supplier.update({ where: { id }, data });
+    return { data: item };
   }
 
   async getInventoryReport() {

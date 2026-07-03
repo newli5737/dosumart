@@ -15,6 +15,8 @@ import {
   LoginDto,
   ForgotPasswordDto,
   ResetPasswordDto,
+  ChangePasswordDto,
+  AddressDto,
 } from './dto/auth.dto';
 
 @Injectable()
@@ -130,6 +132,68 @@ export class AuthService {
 
   async resetPassword(_dto: ResetPasswordDto) {
     return { message: 'Đặt lại mật khẩu thành công' };
+  }
+
+  async changePassword(userId: string, dto: ChangePasswordDto) {
+    const user = await this.prisma.user.findFirst({ where: { id: userId, deletedAt: null } });
+    if (!user || !(await bcrypt.compare(dto.currentPassword, user.password))) {
+      throw new UnauthorizedException({
+        code: 'INVALID_PASSWORD',
+        message: 'Mật khẩu hiện tại không đúng',
+      });
+    }
+    const hashed = await bcrypt.hash(dto.newPassword, 12);
+    await this.prisma.user.update({ where: { id: userId }, data: { password: hashed } });
+    return { message: 'Đổi mật khẩu thành công' };
+  }
+
+  async getAddresses(userId: string) {
+    const items = await this.prisma.address.findMany({
+      where: { userId, deletedAt: null },
+      orderBy: [{ isDefault: 'desc' }, { createdAt: 'desc' }],
+    });
+    return { data: items };
+  }
+
+  async upsertAddress(userId: string, dto: AddressDto, addressId?: string) {
+    if (dto.isDefault) {
+      await this.prisma.address.updateMany({
+        where: { userId, deletedAt: null },
+        data: { isDefault: false },
+      });
+    }
+    if (addressId) {
+      const existing = await this.prisma.address.findFirst({
+        where: { id: addressId, userId, deletedAt: null },
+      });
+      if (!existing) {
+        throw new NotFoundException({ code: 'NOT_FOUND', message: 'Không tìm thấy địa chỉ' });
+      }
+      const item = await this.prisma.address.update({
+        where: { id: addressId },
+        data: { ...dto },
+      });
+      return { data: item };
+    }
+    const count = await this.prisma.address.count({ where: { userId, deletedAt: null } });
+    const item = await this.prisma.address.create({
+      data: { userId, ...dto, isDefault: dto.isDefault ?? count === 0 },
+    });
+    return { data: item };
+  }
+
+  async deleteAddress(userId: string, addressId: string) {
+    const existing = await this.prisma.address.findFirst({
+      where: { id: addressId, userId, deletedAt: null },
+    });
+    if (!existing) {
+      throw new NotFoundException({ code: 'NOT_FOUND', message: 'Không tìm thấy địa chỉ' });
+    }
+    await this.prisma.address.update({
+      where: { id: addressId },
+      data: { deletedAt: new Date() },
+    });
+    return { message: 'Đã xóa địa chỉ' };
   }
 
   private async issueTokens(userId: string, email: string, role: Role) {

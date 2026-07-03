@@ -557,6 +557,22 @@ async function main() {
   }
 
   console.log(`Seed hoàn tất! ${products.length} sản phẩm Tạp Hóa Việt.`);
+
+  const suppliers = [
+    { code: 'NCC-MASAN', name: 'Masan Consumer', phone: '02838229999', contactName: 'NV Masan' },
+    { code: 'NCC-ACECOOK', name: 'Acecook Việt Nam', phone: '02838445566', contactName: 'NV Acecook' },
+    { code: 'NCC-UNILEVER', name: 'Unilever Việt Nam', phone: '02838215678', contactName: 'NV Unilever' },
+    { code: 'NCC-SABECO', name: 'Sabeco', phone: '02838229900', contactName: 'NV Sabeco' },
+  ];
+  for (const s of suppliers) {
+    await prisma.supplier.upsert({
+      where: { code: s.code },
+      update: { name: s.name, phone: s.phone, contactName: s.contactName },
+      create: s,
+    });
+  }
+  console.log(`Đã seed ${suppliers.length} nhà cung cấp.`);
+
   console.log('Tài khoản:');
   console.log('  Admin: admin@dosumart.vn / 123456');
   console.log('  Thu ngân: thungan@dosumart.vn / 123456');

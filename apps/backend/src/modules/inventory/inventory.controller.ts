@@ -1,9 +1,9 @@
-import { Controller, Post, Get, Body, Query, Param } from '@nestjs/common';
+import { Controller, Post, Get, Patch, Body, Query, Param } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { Role, InventoryTransactionType } from '@prisma/client';
 import { InventoryService } from './inventory.service';
 import { Roles, CurrentUser } from '../../shared/decorators/auth.decorators';
-import { IsString, IsNumber, IsEnum, IsOptional } from 'class-validator';
+import { IsString, IsNumber, IsEnum, IsOptional, IsBoolean } from 'class-validator';
 
 class AdjustStockDto {
   @IsString() variantId: string;
@@ -11,6 +11,26 @@ class AdjustStockDto {
   @IsNumber() quantity: number;
   @IsOptional() @IsString() note?: string;
   @IsOptional() @IsString() warehouseId?: string;
+  @IsOptional() @IsString() supplierId?: string;
+  @IsOptional() @IsNumber() unitCost?: number;
+}
+
+class SupplierDto {
+  @IsString() name: string;
+  @IsString() code: string;
+  @IsOptional() @IsString() phone?: string;
+  @IsOptional() @IsString() email?: string;
+  @IsOptional() @IsString() address?: string;
+  @IsOptional() @IsString() contactName?: string;
+}
+
+class UpdateSupplierDto {
+  @IsOptional() @IsString() name?: string;
+  @IsOptional() @IsString() phone?: string;
+  @IsOptional() @IsString() email?: string;
+  @IsOptional() @IsString() address?: string;
+  @IsOptional() @IsString() contactName?: string;
+  @IsOptional() @IsBoolean() isActive?: boolean;
 }
 
 @ApiTags('Kho hàng')
@@ -41,5 +61,20 @@ export class InventoryController {
   @Get('reports/inventory')
   getInventoryReport() {
     return this.inventoryService.getInventoryReport();
+  }
+
+  @Get('suppliers')
+  listSuppliers() {
+    return this.inventoryService.findSuppliers();
+  }
+
+  @Post('suppliers')
+  createSupplier(@Body() dto: SupplierDto) {
+    return this.inventoryService.createSupplier(dto);
+  }
+
+  @Patch('suppliers/:id')
+  updateSupplier(@Param('id') id: string, @Body() dto: UpdateSupplierDto) {
+    return this.inventoryService.updateSupplier(id, dto);
   }
 }

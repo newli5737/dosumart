@@ -5,6 +5,7 @@ import {
   ShoppingCart,
   Warehouse,
   Users,
+  Store,
   LogOut,
   ExternalLink,
   PanelLeftClose,
@@ -19,7 +20,7 @@ import {
   useSidebar,
 } from '../../contexts/SidebarContext';
 
-const navItems: { to: string; label: string; icon: LucideIcon }[] = [
+const navItems: { to: string; label: string; icon: LucideIcon; external?: string }[] = [
   { to: '/', label: 'Tổng quan', icon: LayoutDashboard },
   { to: '/san-pham', label: 'Sản phẩm', icon: Package },
   { to: '/don-hang', label: 'Đơn hàng', icon: ShoppingCart },
@@ -73,6 +74,16 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
             )}
           </NavLink>
         ))}
+        <a
+          href="https://pos-mart.dosutech.site"
+          target="_blank"
+          rel="noreferrer"
+          title={collapsed ? 'Bán hàng POS' : undefined}
+          className={`group relative flex h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium text-gray-400 transition-all hover:bg-green-500/10 hover:text-green-400 ${collapsed ? 'justify-center px-0' : ''}`}
+        >
+          <Store className="h-[18px] w-[18px] shrink-0" />
+          {!collapsed && <span className="truncate">Bán hàng (POS)</span>}
+        </a>
       </nav>
 
       <div className="space-y-1 border-t border-white/[0.08] p-3">
