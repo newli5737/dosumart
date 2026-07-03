@@ -72,6 +72,8 @@ pnpm dev:pos          # :5175
 | Thu ngân | thungan@dosumart.vn | 123456 |
 | Khách hàng | khach@dosumart.vn | 123456 |
 
+**Hướng dẫn sử dụng (chủ cửa hàng & nhân viên):** [docs/HUONG-DAN-SU-DUNG.md](docs/HUONG-DAN-SU-DUNG.md)
+
 ## Cấu trúc dự án
 
 ```
