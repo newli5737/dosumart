@@ -6,7 +6,7 @@ import ProductCard, { ProductCardSkeleton } from '../../components/product/Produ
 import { TrustBar } from '../../components/layout/Footer';
 import type { Product, Category } from '@dosumart/types';
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -47,8 +47,6 @@ const BANNERS = [
 
 export default function HomePage() {
   const [currentBanner, setCurrentBanner] = useState(0);
-  const { scrollY } = useScroll();
-  const y1 = useTransform(scrollY, [0, 500], [0, 150]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -80,46 +78,44 @@ export default function HomePage() {
 
   return (
     <div className="bg-[#f4f6f8]">
-      {/* Hero Section with Parallax */}
-      <section className="relative aspect-[16/9] md:aspect-[21/9] w-full overflow-hidden bg-black">
+      {/* Hero banner */}
+      <section className="relative min-h-[min(72vh,640px)] w-full overflow-hidden bg-black md:min-h-[min(68vh,720px)]">
         <AnimatePresence initial={false}>
           <motion.div
             key={currentBanner}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 1 }}
-            className="absolute inset-0"
-            style={{ y: y1 }}
+            transition={{ duration: 0.8 }}
+            className="absolute inset-0 z-0"
           >
-            <motion.img
-              initial={{ scale: 1.1 }}
-              animate={{ scale: 1 }}
-              transition={{ duration: 6, ease: 'linear' }}
+            <img
               src={BANNERS[currentBanner].image}
               alt={BANNERS[currentBanner].title}
-              className="h-full w-full object-contain md:object-cover md:object-center"
+              className="h-full w-full object-cover object-center"
+              loading="eager"
+              fetchPriority="high"
             />
-            <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/45 to-black/20" />
           </motion.div>
         </AnimatePresence>
 
-        <div className="absolute inset-0 flex items-center">
-          <div className="mx-auto w-full max-w-[1440px] px-8 md:px-16">
-            <AnimatePresence mode="wait">
+        <div className="relative z-10 flex min-h-[inherit] items-center py-12 md:py-16">
+          <div className="mx-auto w-full max-w-[1440px] px-6 md:px-16">
+            <AnimatePresence mode="wait" initial={false}>
               <motion.div
                 key={currentBanner}
-                initial={{ opacity: 0, x: -30 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 30 }}
-                transition={{ duration: 0.5 }}
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -12 }}
+                transition={{ duration: 0.4 }}
                 className="max-w-xl text-white"
               >
                 <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-medium backdrop-blur-md">
                   <Sparkles className="h-3.5 w-3.5" />
                   {BANNERS[currentBanner].tag}
                 </div>
-                <h1 className="text-5xl font-extrabold leading-tight tracking-tight md:text-6xl lg:text-7xl">
+                <h1 className="text-4xl font-extrabold leading-tight tracking-tight sm:text-5xl md:text-6xl lg:text-7xl">
                   {BANNERS[currentBanner].title}
                   <span className="mt-2 block text-[#f97316]">
                     {BANNERS[currentBanner].subtitle}
@@ -143,7 +139,7 @@ export default function HomePage() {
         </div>
 
         {/* Slider Controls */}
-        <div className="absolute bottom-8 left-1/2 flex -translate-x-1/2 gap-3 z-10">
+        <div className="absolute bottom-6 left-1/2 z-20 flex -translate-x-1/2 gap-3 md:bottom-8">
           {BANNERS.map((_, idx) => (
             <button
               key={idx}
