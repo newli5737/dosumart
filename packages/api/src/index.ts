@@ -83,6 +83,15 @@ export const productsApi = {
 export const categoriesApi = {
   list: () => api.get('/categories').then((r) => r.data),
   brands: () => api.get('/brands').then((r) => r.data),
+  createCategory: (data: { name: string; parentId?: string }) =>
+    api.post('/admin/categories', data).then((r) => r.data),
+  updateCategory: (id: string, data: { name: string; parentId?: string }) =>
+    api.patch(`/admin/categories/${id}`, data).then((r) => r.data),
+  deleteCategory: (id: string) => api.delete(`/admin/categories/${id}`).then((r) => r.data),
+  createBrand: (data: { name: string }) => api.post('/admin/brands', data).then((r) => r.data),
+  updateBrand: (id: string, data: { name: string }) =>
+    api.patch(`/admin/brands/${id}`, data).then((r) => r.data),
+  deleteBrand: (id: string) => api.delete(`/admin/brands/${id}`).then((r) => r.data),
 };
 
 export const cartApi = {
@@ -104,6 +113,8 @@ export const ordersApi = {
     api.get('/admin/orders', { params }).then((r) => r.data),
   updateStatus: (id: string, status: string) =>
     api.patch(`/admin/orders/${id}/status`, { status }).then((r) => r.data),
+  bulkUpdateStatus: (ids: string[], status: string) =>
+    api.patch('/admin/orders/bulk-status', { ids, status }).then((r) => r.data),
 };
 
 export const posApi = {
@@ -123,8 +134,19 @@ export const reportsApi = {
   topProducts: (limit?: number) =>
     api.get('/admin/reports/top-products', { params: { limit } }).then((r) => r.data),
   inventory: () => api.get('/admin/reports/inventory').then((r) => r.data),
+  inventoryBySupplier: () => api.get('/admin/reports/inventory-by-supplier').then((r) => r.data),
+  profitBySupplier: () => api.get('/admin/reports/profit-by-supplier').then((r) => r.data),
+  productMargins: () => api.get('/admin/reports/product-margins').then((r) => r.data),
   customers: (params?: Record<string, string | number>) =>
     api.get('/admin/customers', { params }).then((r) => r.data),
+};
+
+export const couponsApi = {
+  list: () => api.get('/admin/coupons').then((r) => r.data),
+  create: (data: Record<string, unknown>) => api.post('/admin/coupons', data).then((r) => r.data),
+  update: (id: string, data: Record<string, unknown>) =>
+    api.patch(`/admin/coupons/${id}`, data).then((r) => r.data),
+  delete: (id: string) => api.delete(`/admin/coupons/${id}`).then((r) => r.data),
 };
 
 export const inventoryApi = {

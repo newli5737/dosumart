@@ -3,7 +3,7 @@ import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { Role, OrderStatus, PaymentMethod } from '@prisma/client';
 import { OrdersService } from './orders.service';
 import { Roles, CurrentUser } from '../../shared/decorators/auth.decorators';
-import { IsString, IsNumber, IsEnum, IsOptional, IsObject } from 'class-validator';
+import { IsString, IsNumber, IsEnum, IsOptional, IsObject, IsArray } from 'class-validator';
 
 class CartItemDto {
   @IsString() variantId: string;
@@ -18,6 +18,11 @@ class CheckoutDto {
 }
 
 class UpdateStatusDto {
+  @IsEnum(OrderStatus) status: OrderStatus;
+}
+
+class BulkStatusDto {
+  @IsArray() @IsString({ each: true }) ids: string[];
   @IsEnum(OrderStatus) status: OrderStatus;
 }
 
@@ -91,5 +96,11 @@ export class OrdersController {
   @Roles(Role.ADMIN, Role.SUPER_ADMIN, Role.STAFF)
   updateStatus(@Param('id') id: string, @Body() dto: UpdateStatusDto) {
     return this.ordersService.updateStatus(id, dto.status);
+  }
+
+  @Patch('admin/orders/bulk-status')
+  @Roles(Role.ADMIN, Role.SUPER_ADMIN, Role.STAFF)
+  bulkUpdateStatus(@Body() dto: BulkStatusDto) {
+    return this.ordersService.bulkUpdateStatus(dto.ids, dto.status);
   }
 }

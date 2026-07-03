@@ -48,6 +48,77 @@ export class ReportsService {
       })),
     };
   }
+
+  async profitBySupplier() {
+    const txs = await this.prisma.inventoryTransaction.findMany({
+      where: { type: 'IMPORT', supplierId: { not: null } },
+      include: { supplier: { select: { id: true, name: true, code: true } } },
+    });
+
+    const map = new Map<string, {
+      supplier: { id: string; name: string; code: string };
+      importQty: number;
+      importValue: number;
+      transactionCount: number;
+    }>();
+
+    for (const tx of txs) {
+      if (!tx.supplierId || !tx.supplier) continue;
+      const qty = Math.abs(tx.quantity);
+      const value = qty * Number(tx.unitCost || 0);
+      const existing = map.get(tx.supplierId);
+      if (existing) {
+        existing.importQty += qty;
+        existing.importValue += value;
+        existing.transactionCount += 1;
+      } else {
+        map.set(tx.supplierId, {
+          supplier: tx.supplier,
+          importQty: qty,
+          importValue: value,
+          transactionCount: 1,
+        });
+      }
+    }
+
+    return {
+      data: Array.from(map.values())
+        .map((r) => ({ ...r, importValue: Math.round(r.importValue) }))
+        .sort((a, b) => b.importValue - a.importValue),
+    };
+  }
+
+  async productMargins() {
+    const variants = await this.prisma.productVariant.findMany({
+      where: { deletedAt: null, product: { deletedAt: null } },
+      include: {
+        product: { select: { name: true, isActive: true } },
+        inventories: { select: { quantity: true } },
+      },
+      orderBy: { product: { name: 'asc' } },
+    });
+
+    return {
+      data: variants.map((v) => {
+        const price = Number(v.price);
+        const cost = Number(v.costPrice || 0);
+        const stock = v.inventories.reduce((s, i) => s + i.quantity, 0);
+        const profit = price - cost;
+        const marginPct = price > 0 ? Math.round((profit / price) * 100) : 0;
+        return {
+          variantId: v.id,
+          productName: v.product.name,
+          sku: v.sku,
+          price,
+          costPrice: cost,
+          profit,
+          marginPct,
+          stock,
+          isActive: v.product.isActive,
+        };
+      }),
+    };
+  }
 }
 
 @Injectable()

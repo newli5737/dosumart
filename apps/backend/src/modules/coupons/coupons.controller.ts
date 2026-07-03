@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { Role, CouponType } from '@prisma/client';
 import { CouponsService } from './coupons.service';
@@ -30,5 +30,15 @@ export class CouponsController {
   @Post()
   create(@Body() dto: CreateCouponDto) {
     return this.couponsService.create(dto);
+  }
+
+  @Patch(':id')
+  update(@Param('id') id: string, @Body() dto: { isActive?: boolean; usageLimit?: number; endAt?: string }) {
+    return this.couponsService.update(id, dto);
+  }
+
+  @Delete(':id')
+  delete(@Param('id') id: string) {
+    return this.couponsService.softDelete(id);
   }
 }

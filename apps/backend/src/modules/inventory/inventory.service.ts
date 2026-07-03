@@ -188,6 +188,55 @@ export class InventoryService {
     return { data: item };
   }
 
+  async getStockBySupplier() {
+    const imports = await this.prisma.inventoryTransaction.findMany({
+      where: { type: 'IMPORT', supplierId: { not: null } },
+      include: {
+        supplier: { select: { id: true, name: true, code: true } },
+        variant: {
+          include: {
+            product: { select: { name: true } },
+            inventories: { include: { warehouse: { select: { name: true } } } },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const map = new Map<string, {
+      supplier: { id: string; name: string; code: string };
+      totalStock: number;
+      productCount: number;
+      lastImportAt: Date;
+      products: Array<{ name: string; sku: string; stock: number }>;
+    }>();
+
+    for (const tx of imports) {
+      if (!tx.supplierId || !tx.supplier) continue;
+      const stock = tx.variant.inventories.reduce((s, i) => s + i.quantity, 0);
+      const existing = map.get(tx.supplierId);
+      const productEntry = { name: tx.variant.product.name, sku: tx.variant.sku, stock };
+      if (existing) {
+        if (!existing.products.some((p) => p.sku === tx.variant.sku)) {
+          existing.products.push(productEntry);
+          existing.productCount += 1;
+          existing.totalStock += stock;
+        }
+        if (tx.createdAt > existing.lastImportAt) existing.lastImportAt = tx.createdAt;
+      } else {
+        map.set(tx.supplierId, {
+          supplier: tx.supplier,
+          totalStock: stock,
+          productCount: 1,
+          lastImportAt: tx.createdAt,
+          products: [productEntry],
+        });
+      }
+    }
+
+    return { data: Array.from(map.values()).sort((a, b) => b.totalStock - a.totalStock) };
+  }
+
   async getInventoryReport() {
     const items = await this.prisma.inventory.findMany({
       include: {

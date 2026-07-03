@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { PackagePlus, History, Building2, Boxes, Plus, Search } from 'lucide-react';
+import { PackagePlus, History, Building2, Boxes, Plus, Search, Download, ArrowDownUp, ClipboardCheck } from 'lucide-react';
 import { reportsApi, inventoryApi, productsApi } from '@dosumart/api';
 import { formatCurrency, formatDate } from '@dosumart/utils';
 import { Spinner, Badge, EmptyState } from '@dosumart/ui';
 import { PageToolbar, DataTable, TableHead, Th } from '../../components/ui/AdminUI';
 
-type Tab = 'stock' | 'import' | 'logs' | 'suppliers';
+type Tab = 'stock' | 'import' | 'export' | 'adjust' | 'logs' | 'suppliers';
 
 const TX_LABELS: Record<string, string> = {
   IMPORT: 'Nhập kho',
@@ -40,9 +40,33 @@ export default function InventoryPage() {
   const tabs: { id: Tab; label: string; icon: typeof Boxes }[] = [
     { id: 'stock', label: 'Tồn kho', icon: Boxes },
     { id: 'import', label: 'Nhập kho', icon: PackagePlus },
+    { id: 'export', label: 'Xuất kho', icon: ArrowDownUp },
+    { id: 'adjust', label: 'Kiểm kê', icon: ClipboardCheck },
     { id: 'logs', label: 'Lịch sử', icon: History },
     { id: 'suppliers', label: 'Nhà cung cấp', icon: Building2 },
   ];
+
+  const exportCsv = () => {
+    const rows = stock?.data || [];
+    const header = 'Sản phẩm,SKU,Kho,Tồn,Cảnh báo,Trạng thái\n';
+    const body = rows.map((item: {
+      productName: string;
+      sku: string;
+      warehouse: string;
+      quantity: number;
+      lowStockAt: number;
+      isLowStock: boolean;
+    }) =>
+      `"${item.productName}","${item.sku}","${item.warehouse}",${item.quantity},${item.lowStockAt},${item.isLowStock ? 'Sắp hết' : 'Đủ hàng'}`,
+    ).join('\n');
+    const blob = new Blob(['\uFEFF' + header + body], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ton-kho-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div>
@@ -71,7 +95,18 @@ export default function InventoryPage() {
 
       {tab === 'stock' && (
         stockLoading ? <Spinner /> : (
-          <DataTable>
+          <>
+            <div className="mb-4 flex justify-end">
+              <button
+                type="button"
+                onClick={exportCsv}
+                className="inline-flex h-10 items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 text-sm font-medium hover:border-orange-200"
+              >
+                <Download className="h-4 w-4" />
+                Xuất CSV
+              </button>
+            </div>
+            <DataTable>
             <table className="w-full text-[13px]">
               <TableHead>
                 <Th>Sản phẩm</Th>
@@ -107,7 +142,29 @@ export default function InventoryPage() {
               </tbody>
             </table>
           </DataTable>
+          </>
         )
+      )}
+
+      {tab === 'export' && (
+        <StockOutForm
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['inventory'] });
+            queryClient.invalidateQueries({ queryKey: ['stock-logs'] });
+            setTab('logs');
+          }}
+        />
+      )}
+
+      {tab === 'adjust' && (
+        <StocktakeForm
+          stock={stock?.data || []}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['inventory'] });
+            queryClient.invalidateQueries({ queryKey: ['stock-logs'] });
+            setTab('logs');
+          }}
+        />
       )}
 
       {tab === 'import' && (
@@ -133,6 +190,128 @@ export default function InventoryPage() {
       {tab === 'suppliers' && (
         <SuppliersTab suppliers={suppliers?.data || []} />
       )}
+    </div>
+  );
+}
+
+function StockOutForm({ onSuccess }: { onSuccess: () => void }) {
+  const [search, setSearch] = useState('');
+  const [variantId, setVariantId] = useState('');
+  const [qty, setQty] = useState(0);
+  const [note, setNote] = useState('');
+
+  const { data: products } = useQuery({
+    queryKey: ['admin-products-export', search],
+    queryFn: () => productsApi.adminList({ search, limit: 10 }),
+    enabled: search.length >= 2,
+  });
+
+  const mutation = useMutation({
+    mutationFn: () =>
+      inventoryApi.importStock(variantId, { type: 'EXPORT', quantity: qty, note: note || 'Xuất kho' }),
+    onSuccess,
+  });
+
+  return (
+    <div className="max-w-2xl rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+      <h3 className="text-lg font-bold text-[#111827]">Phiếu xuất kho</h3>
+      <p className="mt-1 text-sm text-[#9ca3af]">Ghi nhận xuất hàng (hỏng, trả NCC, điều chuyển...)</p>
+      <div className="mt-6 space-y-4">
+        <div>
+          <label className="mb-1.5 block text-sm font-medium">Tìm sản phẩm</label>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <input className="h-11 w-full rounded-xl border border-gray-200 pl-10 pr-4 text-sm" placeholder="Nhập tên hoặc SKU..." value={search} onChange={(e) => setSearch(e.target.value)} />
+          </div>
+          {search.length >= 2 && (
+            <ul className="mt-2 max-h-40 overflow-y-auto rounded-xl border border-gray-100">
+              {(products?.data || []).flatMap((p: { name: string; variants?: Array<{ id: string; sku: string }> }) =>
+                (p.variants || []).map((v) => (
+                  <li key={v.id}>
+                    <button type="button" className={`w-full px-4 py-2.5 text-left text-sm hover:bg-orange-50 ${variantId === v.id ? 'bg-orange-50 font-medium text-[#f97316]' : ''}`} onClick={() => { setVariantId(v.id); setSearch(`${p.name} (${v.sku})`); }}>
+                      {p.name} — <span className="font-mono text-xs">{v.sku}</span>
+                    </button>
+                  </li>
+                )),
+              )}
+            </ul>
+          )}
+        </div>
+        <div>
+          <label className="mb-1.5 block text-sm font-medium">Số lượng xuất *</label>
+          <input type="number" min={1} className="h-11 w-full rounded-xl border border-gray-200 px-4 text-sm" value={qty || ''} onChange={(e) => setQty(Number(e.target.value))} />
+        </div>
+        <div>
+          <label className="mb-1.5 block text-sm font-medium">Lý do</label>
+          <input className="h-11 w-full rounded-xl border border-gray-200 px-4 text-sm" placeholder="VD: Hàng hỏng, trả NCC..." value={note} onChange={(e) => setNote(e.target.value)} />
+        </div>
+        <button type="button" disabled={!variantId || qty <= 0 || mutation.isPending} onClick={() => mutation.mutate()} className="h-11 w-full rounded-xl bg-red-500 text-sm font-semibold text-white hover:bg-red-600 disabled:opacity-50">
+          {mutation.isPending ? 'Đang xử lý...' : 'Xác nhận xuất kho'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function StocktakeForm({
+  stock,
+  onSuccess,
+}: {
+  stock: Array<{ variantId: string; productName: string; sku: string; quantity: number }>;
+  onSuccess: () => void;
+}) {
+  const [variantId, setVariantId] = useState('');
+  const [actualQty, setActualQty] = useState(0);
+  const [note, setNote] = useState('Kiểm kê');
+
+  const selected = stock.find((s) => s.variantId === variantId);
+  const diff = selected ? actualQty - selected.quantity : 0;
+
+  const mutation = useMutation({
+    mutationFn: async () => {
+      if (!selected || diff === 0) return;
+      const type = diff > 0 ? 'ADJUSTMENT' : 'EXPORT';
+      await inventoryApi.importStock(variantId, {
+        type,
+        quantity: Math.abs(diff),
+        note: `${note} (Hệ thống: ${selected.quantity} → Thực tế: ${actualQty})`,
+      });
+    },
+    onSuccess,
+  });
+
+  return (
+    <div className="max-w-2xl rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+      <h3 className="text-lg font-bold text-[#111827]">Kiểm kê tồn kho</h3>
+      <p className="mt-1 text-sm text-[#9ca3af]">Nhập số lượng thực tế để điều chỉnh chênh lệch</p>
+      <div className="mt-6 space-y-4">
+        <div>
+          <label className="mb-1.5 block text-sm font-medium">Chọn sản phẩm</label>
+          <select className="h-11 w-full rounded-xl border border-gray-200 px-4 text-sm" value={variantId} onChange={(e) => setVariantId(e.target.value)}>
+            <option value="">— Chọn —</option>
+            {stock.map((s) => (
+              <option key={s.variantId} value={s.variantId}>{s.productName} ({s.sku}) — Hệ thống: {s.quantity}</option>
+            ))}
+          </select>
+        </div>
+        {selected && (
+          <p className="rounded-xl bg-blue-50 px-4 py-3 text-sm text-blue-700">
+            Tồn hệ thống: <strong>{selected.quantity}</strong>
+          </p>
+        )}
+        <div>
+          <label className="mb-1.5 block text-sm font-medium">Số lượng thực tế *</label>
+          <input type="number" min={0} className="h-11 w-full rounded-xl border border-gray-200 px-4 text-sm" value={actualQty || ''} onChange={(e) => setActualQty(Number(e.target.value))} />
+        </div>
+        {selected && diff !== 0 && (
+          <p className={`rounded-xl px-4 py-3 text-sm ${diff > 0 ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+            Chênh lệch: <strong>{diff > 0 ? '+' : ''}{diff}</strong> ({diff > 0 ? 'tăng' : 'giảm'})
+          </p>
+        )}
+        <button type="button" disabled={!variantId || diff === 0 || mutation.isPending} onClick={() => mutation.mutate()} className="h-11 w-full rounded-xl bg-[#f97316] text-sm font-semibold text-white hover:bg-[#ea580c] disabled:opacity-50">
+          {mutation.isPending ? 'Đang điều chỉnh...' : 'Xác nhận kiểm kê'}
+        </button>
+      </div>
     </div>
   );
 }

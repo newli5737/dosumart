@@ -63,6 +63,11 @@ export class InventoryController {
     return this.inventoryService.getInventoryReport();
   }
 
+  @Get('reports/inventory-by-supplier')
+  getStockBySupplier() {
+    return this.inventoryService.getStockBySupplier();
+  }
+
   @Get('suppliers')
   listSuppliers() {
     return this.inventoryService.findSuppliers();

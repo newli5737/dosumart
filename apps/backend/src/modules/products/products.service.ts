@@ -227,11 +227,28 @@ export class ProductsService {
     basePrice: number;
     isActive: boolean;
     isFeatured: boolean;
+    salePrice: number;
+    costPrice: number;
   }>) {
+    const { salePrice, costPrice, ...productData } = data;
     await this.prisma.product.update({
       where: { id },
-      data: { ...data, ...(data.name && { slug: undefined }) },
+      data: { ...productData, ...(productData.name && { slug: undefined }) },
     });
+    if (salePrice !== undefined || costPrice !== undefined) {
+      const variant = await this.prisma.productVariant.findFirst({
+        where: { productId: id, deletedAt: null },
+      });
+      if (variant) {
+        await this.prisma.productVariant.update({
+          where: { id: variant.id },
+          data: {
+            ...(salePrice !== undefined && { price: salePrice }),
+            ...(costPrice !== undefined && { costPrice }),
+          },
+        });
+      }
+    }
     return this.findById(id);
   }
 

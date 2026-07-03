@@ -230,6 +230,15 @@ export class OrdersService {
     return { data: this.mapOrder(order) };
   }
 
+  async bulkUpdateStatus(ids: string[], status: OrderStatus) {
+    await this.prisma.order.updateMany({
+      where: { id: { in: ids }, deletedAt: null },
+      data: { status },
+    });
+    ids.forEach((id) => this.eventEmitter.emit('order.status.changed', { orderId: id, status }));
+    return { data: { updated: ids.length, status } };
+  }
+
   private async ensureCart(userId: string) {
     let cart = await this.prisma.cart.findUnique({ where: { userId } });
     if (!cart) cart = await this.prisma.cart.create({ data: { userId } });

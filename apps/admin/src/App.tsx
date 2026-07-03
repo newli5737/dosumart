@@ -6,6 +6,10 @@ import ProductsPage from './features/products/ProductsPage';
 import OrdersPage from './features/orders/OrdersPage';
 import InventoryPage from './features/inventory/InventoryPage';
 import CustomersPage from './features/customers/CustomersPage';
+import SalesPage from './features/sales/SalesPage';
+import CatalogPage from './features/catalog/CatalogPage';
+import CouponsPage from './features/coupons/CouponsPage';
+import ReportsPage from './features/reports/ReportsPage';
 import LoginPage from './features/auth/LoginPage';
 
 function AppRoutes() {
@@ -32,9 +36,13 @@ function AppRoutes() {
     <AdminLayout>
       <Routes>
         <Route path="/" element={<DashboardPage />} />
+        <Route path="/ban-hang" element={<SalesPage />} />
         <Route path="/san-pham" element={<ProductsPage />} />
+        <Route path="/danh-muc" element={<CatalogPage />} />
         <Route path="/don-hang" element={<OrdersPage />} />
         <Route path="/kho-hang" element={<InventoryPage />} />
+        <Route path="/khuyen-mai" element={<CouponsPage />} />
+        <Route path="/bao-cao" element={<ReportsPage />} />
         <Route path="/khach-hang" element={<CustomersPage />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>

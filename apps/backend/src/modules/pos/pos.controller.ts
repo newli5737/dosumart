@@ -25,7 +25,7 @@ class PosOrderDto {
 @ApiTags('POS')
 @Controller('pos')
 @ApiBearerAuth()
-@Roles(Role.CASHIER, Role.ADMIN, Role.SUPER_ADMIN)
+@Roles(Role.CASHIER, Role.ADMIN, Role.SUPER_ADMIN, Role.STAFF)
 export class PosController {
   constructor(
     private posService: PosService,

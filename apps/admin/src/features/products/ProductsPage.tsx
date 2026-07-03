@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, X, Upload } from 'lucide-react';
+import { Plus, Search, X, Upload, Pencil, Trash2, FileSpreadsheet } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { productsApi, categoriesApi, api } from '@dosumart/api';
 import { formatCurrency } from '@dosumart/utils';
 import { Spinner, EmptyState, Badge } from '@dosumart/ui';
@@ -27,8 +28,11 @@ type ProductForm = typeof emptyForm;
 export default function ProductsPage() {
   const [search, setSearch] = useState('');
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<ProductForm>(emptyForm);
   const [uploading, setUploading] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery({
@@ -50,10 +54,48 @@ export default function ProductsPage() {
     mutationFn: productsApi.create,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
-      setDrawerOpen(false);
-      setForm(emptyForm);
+      closeDrawer();
     },
   });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) => productsApi.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      closeDrawer();
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: productsApi.delete,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-products'] }),
+  });
+
+  const closeDrawer = () => {
+    setDrawerOpen(false);
+    setEditingId(null);
+    setForm(emptyForm);
+  };
+
+  const openEdit = (p: Product) => {
+    const v = p.variants?.[0];
+    setEditingId(p.id);
+    setForm({
+      name: p.name,
+      categoryId: p.category?.id || '',
+      brandId: p.brand?.id || '',
+      description: p.description || '',
+      basePrice: p.basePrice,
+      salePrice: v?.price ?? p.basePrice,
+      costPrice: v?.costPrice ?? 0,
+      initialStock: v?.stock ?? 0,
+      lowStockAt: 5,
+      isActive: p.isActive,
+      isFeatured: p.isFeatured,
+      images: p.images || [],
+    });
+    setDrawerOpen(true);
+  };
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -103,6 +145,25 @@ export default function ProductsPage() {
       return;
     }
 
+    if (editingId) {
+      updateMutation.mutate({
+        id: editingId,
+        data: {
+          name: form.name.trim(),
+          description: form.description,
+          categoryId: form.categoryId,
+          brandId: form.brandId || undefined,
+          images: form.images,
+          basePrice: form.basePrice || form.salePrice,
+          isActive: form.isActive,
+          isFeatured: form.isFeatured,
+          salePrice: form.salePrice,
+          costPrice: form.costPrice || undefined,
+        },
+      });
+      return;
+    }
+
     const ts = Date.now();
     const sku = `DSM-${ts}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
     const barcode = `893${String(ts).slice(-10)}`;
@@ -126,6 +187,50 @@ export default function ProductsPage() {
     });
   };
 
+  const handleCsvImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImporting(true);
+    try {
+      const text = await file.text();
+      const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
+      const cats = categories?.data || [];
+      let ok = 0;
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        if (i === 0 && line.toLowerCase().includes('tên')) continue;
+        const [name, catName, priceStr, stockStr] = line.split(',').map((s) => s.trim());
+        if (!name || !catName) continue;
+        const cat = cats.find((c: { name: string }) => c.name.toLowerCase() === catName.toLowerCase());
+        if (!cat) continue;
+        const price = Number(priceStr) || 0;
+        const stock = Number(stockStr) || 0;
+        const ts = Date.now() + i;
+        await productsApi.create({
+          name,
+          categoryId: cat.id,
+          basePrice: price,
+          isActive: true,
+          variants: [{
+            sku: `DSM-${ts}`,
+            barcode: `893${String(ts).slice(-10)}`,
+            attributes: {},
+            price,
+            initialStock: stock,
+          }],
+        });
+        ok++;
+      }
+      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      alert(`Đã import ${ok} sản phẩm.`);
+    } catch {
+      alert('Import thất bại. Dùng CSV: tên,danh mục,giá,tồn');
+    } finally {
+      setImporting(false);
+      if (fileRef.current) fileRef.current.value = '';
+    }
+  };
+
   const inputCls = 'h-11 w-full rounded-[10px] border border-gray-200 px-3 text-sm focus:border-[#f97316] focus:outline-none focus:ring-2 focus:ring-orange-100';
   const labelCls = 'mb-1.5 block text-sm font-medium text-[#374151]';
 
@@ -135,14 +240,24 @@ export default function ProductsPage() {
         title="Quản lý sản phẩm"
         description={`${data?.meta?.total ?? 0} sản phẩm trong hệ thống`}
         action={
-          <button
-            type="button"
-            onClick={() => setDrawerOpen(true)}
-            className="inline-flex h-10 items-center gap-2 rounded-[10px] bg-[#f97316] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#ea580c]"
-          >
-            <Plus className="h-4 w-4" />
-            Tạo sản phẩm
-          </button>
+          <div className="flex gap-2">
+            <Link to="/danh-muc" className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-gray-200 px-4 text-sm font-medium hover:bg-gray-50">
+              Danh mục
+            </Link>
+            <label className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-[10px] border border-gray-200 px-4 text-sm font-medium hover:bg-gray-50">
+              <FileSpreadsheet className="h-4 w-4" />
+              {importing ? 'Đang import...' : 'Import CSV'}
+              <input ref={fileRef} type="file" accept=".csv,.txt" className="hidden" onChange={handleCsvImport} disabled={importing} />
+            </label>
+            <button
+              type="button"
+              onClick={() => { setEditingId(null); setForm(emptyForm); setDrawerOpen(true); }}
+              className="inline-flex h-10 items-center gap-2 rounded-[10px] bg-[#f97316] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#ea580c]"
+            >
+              <Plus className="h-4 w-4" />
+              Tạo sản phẩm
+            </button>
+          </div>
         }
       />
 
@@ -182,6 +297,7 @@ export default function ProductsPage() {
               <Th align="right">Giá nhập</Th>
               <Th align="right">Tồn kho</Th>
               <Th>Trạng thái</Th>
+              <Th>Thao tác</Th>
             </TableHead>
             <tbody>
               {(data?.data || []).map((p: Product) => {
@@ -207,6 +323,21 @@ export default function ProductsPage() {
                         {p.isActive ? 'Đang bán' : 'Ngừng bán'}
                       </Badge>
                     </td>
+                    <td className="px-5 py-4">
+                      <div className="flex gap-2">
+                        <button type="button" className="text-[#f97316] hover:text-[#ea580c]" onClick={() => openEdit(p)} title="Sửa">
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          className="text-red-500 hover:text-red-700"
+                          onClick={() => { if (confirm(`Xóa "${p.name}"?`)) deleteMutation.mutate(p.id); }}
+                          title="Xóa"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 );
               })}
@@ -220,10 +351,10 @@ export default function ProductsPage() {
           <div className="animate-slide-in-right h-full w-full max-w-3xl overflow-y-auto bg-white shadow-2xl">
             <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-100 bg-white px-6 py-5">
               <div>
-                <h2 className="text-lg font-semibold">Tạo sản phẩm</h2>
-                <p className="text-xs text-[#9ca3af]">Điền đầy đủ thông tin giá và tồn kho</p>
+                <h2 className="text-lg font-semibold">{editingId ? 'Sửa sản phẩm' : 'Tạo sản phẩm'}</h2>
+                <p className="text-xs text-[#9ca3af]">{editingId ? 'Cập nhật thông tin sản phẩm' : 'Điền đầy đủ thông tin giá và tồn kho'}</p>
               </div>
-              <button type="button" onClick={() => setDrawerOpen(false)} className="rounded-[10px] p-2 hover:bg-gray-100">
+              <button type="button" onClick={closeDrawer} className="rounded-[10px] p-2 hover:bg-gray-100">
                 <X className="h-5 w-5 text-gray-500" />
               </button>
             </div>
@@ -331,10 +462,10 @@ export default function ProductsPage() {
               </section>
 
               <div className="sticky bottom-0 flex gap-2 border-t border-gray-100 bg-white pt-4">
-                <button type="button" onClick={handleSubmit} disabled={createMutation.isPending} className="flex-1 h-11 rounded-[10px] bg-[#f97316] text-sm font-semibold text-white hover:bg-[#ea580c] disabled:opacity-60">
-                  {createMutation.isPending ? 'Đang lưu...' : 'Lưu sản phẩm'}
+                <button type="button" onClick={handleSubmit} disabled={createMutation.isPending || updateMutation.isPending} className="flex-1 h-11 rounded-[10px] bg-[#f97316] text-sm font-semibold text-white hover:bg-[#ea580c] disabled:opacity-60">
+                  {(createMutation.isPending || updateMutation.isPending) ? 'Đang lưu...' : editingId ? 'Cập nhật' : 'Lưu sản phẩm'}
                 </button>
-                <button type="button" onClick={() => setDrawerOpen(false)} className="h-11 rounded-[10px] border border-gray-200 px-4 text-sm hover:bg-gray-50">
+                <button type="button" onClick={closeDrawer} className="h-11 rounded-[10px] border border-gray-200 px-4 text-sm hover:bg-gray-50">
                   Hủy
                 </button>
               </div>

@@ -12,6 +12,10 @@ import {
   PanelLeftOpen,
   Menu,
   X,
+  Monitor,
+  Tag,
+  BarChart3,
+  Layers,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useAuth } from '@dosumart/ui';
@@ -22,9 +26,13 @@ import {
 
 const navItems: { to: string; label: string; icon: LucideIcon; external?: string }[] = [
   { to: '/', label: 'Tổng quan', icon: LayoutDashboard },
+  { to: '/ban-hang', label: 'Bán hàng', icon: Monitor },
   { to: '/san-pham', label: 'Sản phẩm', icon: Package },
+  { to: '/danh-muc', label: 'Danh mục', icon: Layers },
   { to: '/don-hang', label: 'Đơn hàng', icon: ShoppingCart },
   { to: '/kho-hang', label: 'Kho hàng', icon: Warehouse },
+  { to: '/khuyen-mai', label: 'Khuyến mãi', icon: Tag },
+  { to: '/bao-cao', label: 'Báo cáo', icon: BarChart3 },
   { to: '/khach-hang', label: 'Khách hàng', icon: Users },
 ];
 

@@ -36,4 +36,24 @@ export class CouponsService {
     });
     return { data: item };
   }
+
+  async update(id: string, data: Partial<{ isActive: boolean; usageLimit: number; endAt: string }>) {
+    const item = await this.prisma.coupon.update({
+      where: { id },
+      data: {
+        ...(data.isActive !== undefined && { isActive: data.isActive }),
+        ...(data.usageLimit !== undefined && { usageLimit: data.usageLimit }),
+        ...(data.endAt && { endAt: new Date(data.endAt) }),
+      },
+    });
+    return { data: { ...item, value: Number(item.value), minOrderValue: Number(item.minOrderValue) } };
+  }
+
+  async softDelete(id: string) {
+    await this.prisma.coupon.update({
+      where: { id },
+      data: { deletedAt: new Date(), isActive: false },
+    });
+    return { data: { id } };
+  }
 }

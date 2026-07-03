@@ -24,6 +24,16 @@ export class ReportsController {
     return this.reportsService.topProducts(Number(limit) || 10);
   }
 
+  @Get('reports/profit-by-supplier')
+  profitBySupplier() {
+    return this.reportsService.profitBySupplier();
+  }
+
+  @Get('reports/product-margins')
+  productMargins() {
+    return this.reportsService.productMargins();
+  }
+
   @Get('customers')
   customers(@Query() query: Record<string, string>) {
     return this.customersService.findAll(
