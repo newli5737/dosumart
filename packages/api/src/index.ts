@@ -126,6 +126,7 @@ export const posApi = {
   searchProducts: (q?: string, barcode?: string) =>
     api.get('/pos/products/search', { params: { q, barcode } }).then((r) => r.data),
   printOrder: (id: string) => api.post(`/pos/orders/${id}/print`).then((r) => r.data),
+  getStore: () => api.get('/settings/store').then((r) => r.data),
 };
 
 export const reportsApi = {

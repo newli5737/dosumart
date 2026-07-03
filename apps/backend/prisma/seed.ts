@@ -406,13 +406,16 @@ async function main() {
     where: { key: 'store' },
     update: {
       value: {
-        name: 'Tạp Hóa Việt',
+        name: 'DoSuMart',
+        branchName: 'CN Tạp Hóa DoSuMart — Bình Tân',
         tagline: 'Hàng tiêu dùng chính hãng - Giá cả bình dân',
-        address: '123 Nguyễn Huệ, Quận 1, TP.HCM',
-        phone: '028 1234 5678',
+        address: 'Số 45A đường số 5, KDC Bình Trị Đông B, Phường Bình Trị Đông, Quận Bình Tân, TP. Hồ Chí Minh',
+        phone: '0901 234 567',
+        hotline: '1900 6368',
         email: 'hotro@dosumart.vn',
-        taxCode: '0123456789',
-        logo: '/dosumart.png',
+        taxCode: '0312345678',
+        website: 'mart.dosutech.site',
+        logo: '/dosumart.svg',
         banners: [
           {
             image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=1600&q=80',
@@ -444,13 +447,16 @@ async function main() {
     create: {
       key: 'store',
       value: {
-        name: 'Tạp Hóa Việt',
+        name: 'DoSuMart',
+        branchName: 'CN Tạp Hóa DoSuMart — Bình Tân',
         tagline: 'Hàng tiêu dùng chính hãng - Giá cả bình dân',
-        address: '123 Nguyễn Huệ, Quận 1, TP.HCM',
-        phone: '028 1234 5678',
+        address: 'Số 45A đường số 5, KDC Bình Trị Đông B, Phường Bình Trị Đông, Quận Bình Tân, TP. Hồ Chí Minh',
+        phone: '0901 234 567',
+        hotline: '1900 6368',
         email: 'hotro@dosumart.vn',
-        taxCode: '0123456789',
-        logo: '/dosumart.png',
+        taxCode: '0312345678',
+        website: 'mart.dosutech.site',
+        logo: '/dosumart.svg',
         banners: [
           {
             image: 'https://res.cloudinary.com/dn00btmpw/image/upload/v1782982295/d0ocynjittjuki4jpjco.jpg',

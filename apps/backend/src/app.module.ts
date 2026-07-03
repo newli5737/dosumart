@@ -12,6 +12,7 @@ import { PosModule } from './modules/pos/pos.module';
 import { CouponsModule } from './modules/coupons/coupons.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { UploadModule } from './modules/upload/upload.module';
+import { SettingsModule } from './modules/settings/settings.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { UploadModule } from './modules/upload/upload.module';
     CouponsModule,
     ReportsModule,
     UploadModule,
+    SettingsModule,
   ],
 })
 export class AppModule {}

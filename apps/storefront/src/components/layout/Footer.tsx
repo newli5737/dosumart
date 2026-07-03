@@ -41,8 +41,8 @@ export default function Footer() {
           <div>
             <h4 className="text-sm font-semibold text-white">Liên hệ</h4>
             <ul className="mt-4 space-y-2.5 text-sm text-gray-400">
-              <li>123 Nguyễn Huệ, Quận 1, TP.HCM</li>
-              <li>Hotline: 028 1234 5678</li>
+              <li>Số 45A đường số 5, KDC Bình Trị Đông B, Phường Bình Trị Đông, Quận Bình Tân, TP. Hồ Chí Minh</li>
+              <li>Hotline: 1900 6368</li>
               <li>Email: hotro@dosumart.vn</li>
             </ul>
           </div>

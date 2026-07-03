@@ -62,7 +62,7 @@ function PosModal({
 
 export default function SalesPage() {
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   const [search, setSearch] = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
   const [cashReceived, setCashReceived] = useState('');
@@ -77,6 +77,12 @@ export default function SalesPage() {
   const { data: shift, refetch: refetchShift } = useQuery({
     queryKey: ['current-shift'],
     queryFn: posApi.currentShift,
+  });
+
+  const { data: storeSettings } = useQuery({
+    queryKey: ['store-settings'],
+    queryFn: posApi.getStore,
+    staleTime: 5 * 60_000,
   });
 
   const trimmedSearch = search.trim();
@@ -119,7 +125,10 @@ export default function SalesPage() {
       clear();
       setShowPayment(false);
       setCashReceived('');
-      printReceipt(order);
+      printReceipt(order, {
+        store: storeSettings?.data,
+        cashier: user?.fullName || user?.email,
+      });
     },
   });
 
@@ -149,12 +158,17 @@ export default function SalesPage() {
       }
       if (e.ctrlKey && e.key === 'p') {
         e.preventDefault();
-        if (lastOrder) printReceipt(lastOrder);
+        if (lastOrder) {
+          printReceipt(lastOrder, {
+            store: storeSettings?.data,
+            cashier: user?.fullName || user?.email,
+          });
+        }
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [items, lastOrder]);
+  }, [items, lastOrder, storeSettings, user]);
 
   const total = subtotal() - discount;
   const change = cashReceived ? Number(cashReceived) - total : 0;
