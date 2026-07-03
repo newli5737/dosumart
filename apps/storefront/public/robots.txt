@@ -1,0 +1,35 @@
+# DoSuMart Storefront — https://mart.dosutech.site
+User-agent: *
+Allow: /
+Disallow: /dang-nhap
+Disallow: /dang-ky
+Disallow: /tai-khoan
+Disallow: /gio-hang
+Disallow: /thanh-toan
+
+# Facebook / Meta (link preview)
+User-agent: facebookexternalhit
+Allow: /
+
+User-agent: Facebot
+Allow: /
+
+User-agent: meta-externalagent
+Allow: /
+
+# Zalo
+User-agent: Zalo
+Allow: /
+
+User-agent: ZaloBot
+Allow: /
+
+# Telegram
+User-agent: TelegramBot
+Allow: /
+
+# Threads
+User-agent: ThreadsBot
+Allow: /
+
+Sitemap: https://mart.dosutech.site/sitemap.xml

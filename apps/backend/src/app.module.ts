@@ -13,6 +13,7 @@ import { CouponsModule } from './modules/coupons/coupons.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { UploadModule } from './modules/upload/upload.module';
 import { SettingsModule } from './modules/settings/settings.module';
+import { SeoModule } from './modules/seo/seo.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { SettingsModule } from './modules/settings/settings.module';
     ReportsModule,
     UploadModule,
     SettingsModule,
+    SeoModule,
   ],
 })
 export class AppModule {}

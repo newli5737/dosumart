@@ -1,3 +1,5 @@
+export const STOREFRONT_URL = 'https://mart.dosutech.site';
+
 export type AuthClient = 'admin' | 'pos' | 'store';
 
 export const ROLES_BY_AUTH_CLIENT: Record<AuthClient, string[]> = {

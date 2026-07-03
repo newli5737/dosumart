@@ -9,7 +9,7 @@ import { TransformInterceptor } from './shared/interceptors/transform.intercepto
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  app.setGlobalPrefix('api');
+  app.setGlobalPrefix('api', { exclude: ['sitemap.xml'] });
   app.use(cookieParser());
   app.enableCors({
     origin: (process.env.CORS_ORIGINS || 'http://localhost:5173').split(','),
