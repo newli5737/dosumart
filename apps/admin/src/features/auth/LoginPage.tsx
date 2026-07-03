@@ -19,8 +19,6 @@ const features = [
   { icon: Shield, text: 'Phân quyền an toàn cho nhân viên' },
 ];
 
-const ADMIN_ROLES = ['ADMIN', 'SUPER_ADMIN', 'STAFF'];
-
 export default function LoginPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -33,16 +31,16 @@ export default function LoginPage() {
   const onSubmit = async (data: z.infer<typeof schema>) => {
     setError('');
     try {
-      const res = await authApi.login(data.email, data.password);
-      if (!ADMIN_ROLES.includes(res.data?.user?.role)) {
-        await authApi.logout();
-        setError('Tài khoản không có quyền truy cập Admin.');
-        return;
-      }
+      await authApi.login(data.email, data.password);
       await queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY });
       navigate('/');
-    } catch {
-      setError('Email hoặc mật khẩu không đúng. Vui lòng thử lại.');
+    } catch (err: unknown) {
+      const code = (err as { response?: { data?: { code?: string } } })?.response?.data?.code;
+      if (code === 'FORBIDDEN_CLIENT') {
+        setError('Tài khoản không có quyền truy cập Admin.');
+      } else {
+        setError('Email hoặc mật khẩu không đúng. Vui lòng thử lại.');
+      }
     }
   };
 

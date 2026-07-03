@@ -1,4 +1,4 @@
-import { IsEmail, IsString, MinLength, IsOptional, IsBoolean } from 'class-validator';
+import { IsEmail, IsString, MinLength, IsOptional, IsBoolean, IsIn } from 'class-validator';
 
 export class RegisterDto {
   @IsEmail({}, { message: 'Email không hợp lệ' })
@@ -23,6 +23,11 @@ export class LoginDto {
 
   @IsString()
   password: string;
+
+  /** Ứng dụng đăng nhập — mỗi app có session cookie riêng */
+  @IsOptional()
+  @IsIn(['admin', 'pos', 'store'])
+  client?: 'admin' | 'pos' | 'store';
 }
 
 export class RefreshTokenDto {

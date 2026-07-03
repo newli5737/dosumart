@@ -1,15 +1,32 @@
 import axios, { AxiosError } from 'axios';
-import { DEFAULT_API_URL } from '@dosumart/constants';
+import { DEFAULT_API_URL, type AuthClient } from '@dosumart/constants';
 
 const API_BASE_URL =
   (typeof import.meta !== 'undefined' &&
     (import.meta as ImportMeta & { env?: Record<string, string> }).env?.VITE_API_URL) ||
   DEFAULT_API_URL;
 
+let authClient: AuthClient = 'store';
+
+/** Gọi một lần khi khởi động app — mỗi frontend dùng client riêng (admin/pos/store) */
+export function setAuthClient(client: AuthClient) {
+  authClient = client;
+}
+
+export function getAuthClient(): AuthClient {
+  return authClient;
+}
+
 const api = axios.create({
   baseURL: API_BASE_URL,
   withCredentials: true,
   headers: { 'Content-Type': 'application/json' },
+});
+
+api.interceptors.request.use((config) => {
+  config.headers = config.headers ?? {};
+  config.headers['X-Auth-Client'] = authClient;
+  return config;
 });
 
 let isRefreshing = false;
@@ -26,7 +43,10 @@ api.interceptors.response.use(
           await axios.post(
             `${API_BASE_URL}/auth/refresh`,
             {},
-            { withCredentials: true },
+            {
+              withCredentials: true,
+              headers: { 'X-Auth-Client': authClient },
+            },
           );
           refreshQueue.forEach((cb) => cb());
           refreshQueue = [];
@@ -54,7 +74,7 @@ export { api };
 
 export const authApi = {
   login: (email: string, password: string) =>
-    api.post('/auth/login', { email, password }).then((r) => r.data),
+    api.post('/auth/login', { email, password, client: authClient }).then((r) => r.data),
   register: (data: { email: string; password: string; fullName: string; phone?: string }) =>
     api.post('/auth/register', data).then((r) => r.data),
   logout: () => api.post('/auth/logout').then((r) => r.data),

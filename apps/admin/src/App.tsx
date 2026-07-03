@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { Spinner, useAuth } from '@dosumart/ui';
+import { Spinner, useAuth, AccessDeniedPage } from '@dosumart/ui';
 import AdminLayout from './components/layout/AdminLayout';
 import DashboardPage from './features/dashboard/DashboardPage';
 import ProductsPage from './features/products/ProductsPage';
@@ -13,13 +13,22 @@ import ReportsPage from './features/reports/ReportsPage';
 import LoginPage from './features/auth/LoginPage';
 
 function AppRoutes() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, accessDenied } = useAuth();
 
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <Spinner />
       </div>
+    );
+  }
+
+  if (accessDenied) {
+    return (
+      <AccessDeniedPage
+        title="Không có quyền Admin"
+        description="Tài khoản thu ngân hoặc khách hàng không được truy cập trang quản trị. Vui lòng dùng POS hoặc đăng xuất."
+      />
     );
   }
 

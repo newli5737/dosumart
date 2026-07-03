@@ -18,6 +18,11 @@ import {
   ChangePasswordDto,
   AddressDto,
 } from './dto/auth.dto';
+import {
+  type AuthClient,
+  isRoleAllowedForClient,
+  parseAuthClient,
+} from './auth-client.util';
 
 @Injectable()
 export class AuthService {
@@ -63,6 +68,14 @@ export class AuthService {
       throw new UnauthorizedException({
         code: 'INVALID_CREDENTIALS',
         message: 'Email hoặc mật khẩu không đúng',
+      });
+    }
+
+    const client = parseAuthClient(dto.client);
+    if (!isRoleAllowedForClient(user.role, client)) {
+      throw new UnauthorizedException({
+        code: 'FORBIDDEN_CLIENT',
+        message: 'Tài khoản không có quyền truy cập ứng dụng này',
       });
     }
 

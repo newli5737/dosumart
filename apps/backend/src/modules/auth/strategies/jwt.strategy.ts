@@ -3,6 +3,11 @@ import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../../shared/database/prisma.service';
+import {
+  accessCookieName,
+  LEGACY_ACCESS_COOKIE,
+  parseAuthClient,
+} from '../auth-client.util';
 
 export interface JwtPayload {
   sub: string;
@@ -18,8 +23,13 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromExtractors([
-        (request: any) => {
-          return request?.cookies?.accessToken;
+        (request: { cookies?: Record<string, string>; headers?: Record<string, string | string[]> }) => {
+          const raw = request?.headers?.['x-auth-client'];
+          const client = parseAuthClient(Array.isArray(raw) ? raw[0] : raw);
+          const scoped = request?.cookies?.[accessCookieName(client)];
+          if (scoped) return scoped;
+          if (client === 'store') return request?.cookies?.[LEGACY_ACCESS_COOKIE] ?? null;
+          return null;
         },
       ]),
       ignoreExpiration: false,

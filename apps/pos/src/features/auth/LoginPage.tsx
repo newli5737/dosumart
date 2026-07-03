@@ -11,8 +11,6 @@ const features = [
   { icon: Zap, text: 'Phím tắt F2/F4 cho thao tác siêu tốc' },
 ];
 
-const POS_ROLES = ['CASHIER', 'STAFF', 'ADMIN', 'SUPER_ADMIN'];
-
 export default function LoginPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -26,16 +24,16 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
     try {
-      const res = await authApi.login(email, password);
-      if (!POS_ROLES.includes(res.data?.user?.role)) {
-        await authApi.logout();
-        setError('Tài khoản không có quyền truy cập POS.');
-        return;
-      }
+      await authApi.login(email, password);
       await queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY });
       navigate('/');
-    } catch {
-      setError('Email hoặc mật khẩu không đúng. Vui lòng thử lại.');
+    } catch (err: unknown) {
+      const code = (err as { response?: { data?: { code?: string } } })?.response?.data?.code;
+      if (code === 'FORBIDDEN_CLIENT') {
+        setError('Tài khoản không có quyền truy cập POS.');
+      } else {
+        setError('Email hoặc mật khẩu không đúng. Vui lòng thử lại.');
+      }
     } finally {
       setLoading(false);
     }

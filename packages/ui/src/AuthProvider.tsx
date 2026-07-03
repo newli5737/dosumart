@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useMemo, type ReactNode } from 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { authApi } from '@dosumart/api';
 import type { User } from '@dosumart/types';
+import type { Role } from '@dosumart/types';
 
 export const AUTH_QUERY_KEY = ['auth', 'me'] as const;
 
@@ -9,13 +10,21 @@ interface AuthContextValue {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  accessDenied: boolean;
   refetch: () => Promise<void>;
   logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-export function AuthProvider({ children }: { children: ReactNode }) {
+export function AuthProvider({
+  children,
+  allowedRoles,
+}: {
+  children: ReactNode;
+  /** Nếu set — chỉ các role này được coi là đã đăng nhập trong app */
+  allowedRoles?: Role[];
+}) {
   const queryClient = useQueryClient();
 
   const { data, isLoading, isError, refetch } = useQuery({
@@ -25,7 +34,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     staleTime: 60_000,
   });
 
-  const user = !isError && data?.data ? (data.data as User) : null;
+  const rawUser = !isError && data?.data ? (data.data as User) : null;
+  const roleAllowed =
+    !rawUser || !allowedRoles?.length || allowedRoles.includes(rawUser.role as Role);
+  const user = roleAllowed ? rawUser : null;
+  const accessDenied = !!rawUser && !roleAllowed;
 
   const refetchAuth = useCallback(async () => {
     await refetch();
@@ -45,10 +58,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       isAuthenticated: !!user,
       isLoading,
+      accessDenied,
       refetch: refetchAuth,
       logout,
     }),
-    [user, isLoading, refetchAuth, logout],
+    [user, isLoading, accessDenied, refetchAuth, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

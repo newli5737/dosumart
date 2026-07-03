@@ -105,4 +105,5 @@ export function PageHeader({ title, action }: { title: string; action?: ReactNod
 }
 
 export { AuthProvider, useAuth, AUTH_QUERY_KEY } from './AuthProvider';
+export { AccessDeniedPage } from './AccessDeniedPage';
 export { QrPaymentPanel } from './QrPaymentPanel';

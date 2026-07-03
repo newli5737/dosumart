@@ -1,3 +1,11 @@
+export type AuthClient = 'admin' | 'pos' | 'store';
+
+export const ROLES_BY_AUTH_CLIENT: Record<AuthClient, string[]> = {
+  admin: ['ADMIN', 'SUPER_ADMIN', 'STAFF'],
+  pos: ['CASHIER', 'STAFF', 'ADMIN', 'SUPER_ADMIN'],
+  store: ['CUSTOMER'],
+};
+
 export const DEFAULT_API_URL = 'http://localhost:3000/api';
 
 export const ORDER_STATUS_LABELS: Record<string, string> = {
