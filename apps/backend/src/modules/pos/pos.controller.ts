@@ -66,7 +66,8 @@ export class PosController {
   }
 
   @Get('products/search')
-  searchProducts(@Query() query: Record<string, string>) {
-    return { data: this.productsService.searchForPos(query.q, query.barcode) };
+  async searchProducts(@Query() query: Record<string, string>) {
+    const data = await this.productsService.searchForPos(query.q, query.barcode);
+    return { data };
   }
 }
