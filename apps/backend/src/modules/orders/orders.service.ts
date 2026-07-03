@@ -4,16 +4,10 @@ import { OrderChannel, OrderStatus, PaymentMethod, PaymentStatus } from '@prisma
 import { PrismaService } from '../../shared/database/prisma.service';
 import { InventoryService } from '../inventory/inventory.service';
 import { paginate, paginationMeta } from '../../shared/dto/pagination.dto';
+import { generateUniqueOrderCode } from '../../shared/utils/order-code.util';
 
 export class OrderCreatedEvent {
   constructor(public readonly orderId: string) {}
-}
-
-function generateOrderCode() {
-  const now = new Date();
-  const date = now.toISOString().slice(0, 10).replace(/-/g, '');
-  const rand = Math.random().toString(36).slice(2, 6).toUpperCase();
-  return `DH${date}${rand}`;
 }
 
 @Injectable()
@@ -122,14 +116,18 @@ export class OrdersService {
     const total = subtotal - discount + shippingFee + tax;
 
     const order = await this.prisma.$transaction(async (tx) => {
+      const code = await generateUniqueOrderCode(this.prisma);
       const created = await tx.order.create({
         data: {
-          code: generateOrderCode(),
+          code,
           userId,
           channel: OrderChannel.ONLINE,
           status: OrderStatus.PENDING,
           paymentMethod: data.paymentMethod,
-          paymentStatus: data.paymentMethod === PaymentMethod.COD ? PaymentStatus.UNPAID : PaymentStatus.UNPAID,
+          paymentStatus:
+            data.paymentMethod === PaymentMethod.BANK_TRANSFER
+              ? PaymentStatus.UNPAID
+              : PaymentStatus.UNPAID,
           subtotal,
           discount,
           tax,
@@ -237,6 +235,34 @@ export class OrdersService {
     });
     ids.forEach((id) => this.eventEmitter.emit('order.status.changed', { orderId: id, status }));
     return { data: { updated: ids.length, status } };
+  }
+
+  async confirmPayment(id: string) {
+    const order = await this.prisma.order.findFirst({ where: { id, deletedAt: null } });
+    if (!order) {
+      throw new NotFoundException({ code: 'NOT_FOUND', message: 'Không tìm thấy đơn hàng' });
+    }
+    if (order.paymentStatus === PaymentStatus.PAID) {
+      const existing = await this.prisma.order.findFirst({
+        where: { id },
+        include: { items: true, user: { select: { fullName: true, email: true } } },
+      });
+      return { data: this.mapOrder(existing!) };
+    }
+    const updated = await this.prisma.order.update({
+      where: { id },
+      data: {
+        paymentStatus: PaymentStatus.PAID,
+        status:
+          order.channel === OrderChannel.POS && order.status === OrderStatus.PENDING
+            ? OrderStatus.COMPLETED
+            : order.status === OrderStatus.PENDING
+              ? OrderStatus.CONFIRMED
+              : order.status,
+      },
+      include: { items: true, user: { select: { fullName: true, email: true } } },
+    });
+    return { data: this.mapOrder(updated) };
   }
 
   private async ensureCart(userId: string) {

@@ -11,12 +11,14 @@ import {
   Trash2,
   X,
   Loader2,
+  QrCode,
 } from 'lucide-react';
 import { posApi } from '@dosumart/api';
 import { usePosStore } from '@dosumart/stores';
 import { formatCurrency } from '@dosumart/utils';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@dosumart/ui';
+import { useAuth, QrPaymentPanel } from '@dosumart/ui';
+import type { SepayConfig } from '@dosumart/utils';
 import { printReceipt, type ReceiptOrder } from './printReceipt';
 
 type PosProduct = {
@@ -67,6 +69,8 @@ export default function SalesPage() {
   const [searchFocused, setSearchFocused] = useState(false);
   const [cashReceived, setCashReceived] = useState('');
   const [showPayment, setShowPayment] = useState(false);
+  const [paymentMode, setPaymentMode] = useState<'CASH' | 'QR'>('CASH');
+  const [qrOrder, setQrOrder] = useState<ReceiptOrder | null>(null);
   const [showCloseShift, setShowCloseShift] = useState(false);
   const [closingCash, setClosingCash] = useState('');
   const [openingCash, setOpeningCash] = useState('');
@@ -121,10 +125,32 @@ export default function SalesPage() {
     mutationFn: posApi.createOrder,
     onSuccess: (res) => {
       const order = res.data as ReceiptOrder;
+      const isQr = order.paymentMethod === 'BANK_TRANSFER';
+      if (isQr) {
+        setQrOrder(order);
+        clear();
+        setShowPayment(false);
+        setCashReceived('');
+        setPaymentMode('CASH');
+        return;
+      }
       setLastOrder(order);
       clear();
       setShowPayment(false);
       setCashReceived('');
+      printReceipt(order, {
+        store: storeSettings?.data,
+        cashier: user?.fullName || user?.email,
+      });
+    },
+  });
+
+  const confirmPaymentMutation = useMutation({
+    mutationFn: (id: string) => posApi.confirmPayment(id),
+    onSuccess: (res) => {
+      const order = res.data as ReceiptOrder;
+      setQrOrder(null);
+      setLastOrder(order);
       printReceipt(order, {
         store: storeSettings?.data,
         cashier: user?.fullName || user?.email,
@@ -417,37 +443,89 @@ export default function SalesPage() {
               </button>
             ) : (
               <div className="mt-4 space-y-3">
-                <input
-                  type="number"
-                  placeholder="Tiền khách đưa"
-                  value={cashReceived}
-                  onChange={(e) => setCashReceived(e.target.value)}
-                  autoFocus
-                  className="h-11 w-full rounded-xl border border-gray-200 px-4 text-sm focus:border-[#f97316] focus:outline-none focus:ring-2 focus:ring-orange-100"
-                />
-                {cashReceived && (
-                  <p className="text-sm">
-                    Tiền thối: <span className="text-lg font-bold text-[#16a34a]">{formatCurrency(Math.max(0, change))}</span>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMode('CASH')}
+                    className={`flex h-10 flex-1 items-center justify-center gap-1.5 rounded-xl text-sm font-semibold ${
+                      paymentMode === 'CASH'
+                        ? 'bg-[#f97316] text-white'
+                        : 'border border-gray-200 text-[#374151] hover:bg-gray-50'
+                    }`}
+                  >
+                    <Banknote className="h-4 w-4" />
+                    Tiền mặt
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMode('QR')}
+                    className={`flex h-10 flex-1 items-center justify-center gap-1.5 rounded-xl text-sm font-semibold ${
+                      paymentMode === 'QR'
+                        ? 'bg-[#f97316] text-white'
+                        : 'border border-gray-200 text-[#374151] hover:bg-gray-50'
+                    }`}
+                  >
+                    <QrCode className="h-4 w-4" />
+                    QR CK
+                  </button>
+                </div>
+
+                {paymentMode === 'CASH' ? (
+                  <>
+                    <input
+                      type="number"
+                      placeholder="Tiền khách đưa"
+                      value={cashReceived}
+                      onChange={(e) => setCashReceived(e.target.value)}
+                      autoFocus
+                      className="h-11 w-full rounded-xl border border-gray-200 px-4 text-sm focus:border-[#f97316] focus:outline-none focus:ring-2 focus:ring-orange-100"
+                    />
+                    {cashReceived && (
+                      <p className="text-sm">
+                        Tiền thối:{' '}
+                        <span className="text-lg font-bold text-[#16a34a]">
+                          {formatCurrency(Math.max(0, change))}
+                        </span>
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <p className="rounded-xl bg-orange-50 px-3 py-2 text-xs text-orange-800">
+                    Tạo mã QR với mã đơn 8 ký tự làm nội dung chuyển khoản. Xác nhận sau khi khách đã chuyển tiền.
                   </p>
                 )}
+
                 <div className="flex gap-2">
                   <button
                     type="button"
                     className="flex h-11 flex-1 items-center justify-center rounded-xl bg-gradient-to-r from-[#16a34a] to-[#22c55e] text-sm font-semibold text-white disabled:opacity-50"
-                    disabled={!cashReceived || Number(cashReceived) < total || createOrderMutation.isPending}
-                    onClick={() => createOrderMutation.mutate({
-                      items: items.map((i) => ({ variantId: i.variantId, quantity: i.quantity })),
-                      paymentMethod: 'CASH',
-                      cashReceived: Number(cashReceived),
-                      discount,
-                    })}
+                    disabled={
+                      createOrderMutation.isPending ||
+                      (paymentMode === 'CASH' &&
+                        (!cashReceived || Number(cashReceived) < total))
+                    }
+                    onClick={() =>
+                      createOrderMutation.mutate({
+                        items: items.map((i) => ({ variantId: i.variantId, quantity: i.quantity })),
+                        paymentMethod: paymentMode === 'QR' ? 'BANK_TRANSFER' : 'CASH',
+                        cashReceived: paymentMode === 'CASH' ? Number(cashReceived) : undefined,
+                        discount,
+                      })
+                    }
                   >
-                    {createOrderMutation.isPending ? 'Đang xử lý...' : 'Xác nhận'}
+                    {createOrderMutation.isPending
+                      ? 'Đang xử lý...'
+                      : paymentMode === 'QR'
+                        ? 'Tạo mã QR'
+                        : 'Xác nhận'}
                   </button>
                   <button
                     type="button"
                     className="flex h-11 w-11 items-center justify-center rounded-xl border border-gray-200 hover:bg-gray-50"
-                    onClick={() => setShowPayment(false)}
+                    onClick={() => {
+                      setShowPayment(false);
+                      setPaymentMode('CASH');
+                    }}
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -457,6 +535,33 @@ export default function SalesPage() {
           </div>
         </div>
       </div>
+
+      {qrOrder && storeSettings?.data?.sepay?.accountNumber && (
+        <PosModal
+          title="Thanh toán QR"
+          description={`Mã đơn ${qrOrder.code} — nội dung CK khi chuyển khoản`}
+          onClose={() => setQrOrder(null)}
+          actions={
+            <button
+              type="button"
+              onClick={() => setQrOrder(null)}
+              className="h-11 flex-1 rounded-xl border border-gray-200 text-sm font-medium hover:bg-gray-50"
+            >
+              Đóng (chưa nhận tiền)
+            </button>
+          }
+        >
+          <QrPaymentPanel
+            orderCode={qrOrder.code ?? ''}
+            amount={qrOrder.total ?? 0}
+            sepay={storeSettings.data.sepay as SepayConfig}
+            showConfirm
+            confirming={confirmPaymentMutation.isPending}
+            onConfirm={() => qrOrder.id && confirmPaymentMutation.mutate(qrOrder.id)}
+            hint="Kiểm tra sao kê SePay trước khi xác nhận."
+          />
+        </PosModal>
+      )}
 
       {showCloseShift && (
         <PosModal

@@ -103,6 +103,10 @@ export const cartApi = {
   removeItem: (id: string) => api.delete(`/cart/items/${id}`).then((r) => r.data),
 };
 
+export const settingsApi = {
+  getStore: () => api.get('/settings/store').then((r) => r.data),
+};
+
 export const ordersApi = {
   checkout: (data: unknown) => api.post('/orders', data).then((r) => r.data),
   list: (params?: Record<string, string | number>) =>
@@ -115,6 +119,8 @@ export const ordersApi = {
     api.patch(`/admin/orders/${id}/status`, { status }).then((r) => r.data),
   bulkUpdateStatus: (ids: string[], status: string) =>
     api.patch('/admin/orders/bulk-status', { ids, status }).then((r) => r.data),
+  confirmPayment: (id: string) =>
+    api.patch(`/admin/orders/${id}/confirm-payment`).then((r) => r.data),
 };
 
 export const posApi = {
@@ -126,6 +132,8 @@ export const posApi = {
   searchProducts: (q?: string, barcode?: string) =>
     api.get('/pos/products/search', { params: { q, barcode } }).then((r) => r.data),
   printOrder: (id: string) => api.post(`/pos/orders/${id}/print`).then((r) => r.data),
+  confirmPayment: (id: string) =>
+    api.post(`/pos/orders/${id}/confirm-payment`).then((r) => r.data),
   getStore: () => api.get('/settings/store').then((r) => r.data),
 };
 

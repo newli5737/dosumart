@@ -4,13 +4,7 @@ import { OrderChannel, OrderStatus, PaymentMethod, PaymentStatus } from '@prisma
 import { PrismaService } from '../../shared/database/prisma.service';
 import { InventoryService } from '../inventory/inventory.service';
 import { OrderCreatedEvent } from '../orders/orders.service';
-
-function generateOrderCode() {
-  const now = new Date();
-  const date = now.toISOString().slice(0, 10).replace(/-/g, '');
-  const rand = Math.random().toString(36).slice(2, 6).toUpperCase();
-  return `POS${date}${rand}`;
-}
+import { generateUniqueOrderCode } from '../../shared/utils/order-code.util';
 
 @Injectable()
 export class PosService {
@@ -118,15 +112,18 @@ export class PosService {
       changeAmount = cashReceived - total;
     }
 
+    const isQr = data.paymentMethod === PaymentMethod.BANK_TRANSFER;
+    const code = await generateUniqueOrderCode(this.prisma);
+
     const order = await this.prisma.$transaction(async (tx) => {
       return tx.order.create({
         data: {
-          code: generateOrderCode(),
+          code,
           userId: data.customerId,
           channel: OrderChannel.POS,
-          status: OrderStatus.COMPLETED,
+          status: isQr ? OrderStatus.PENDING : OrderStatus.COMPLETED,
           paymentMethod: data.paymentMethod,
-          paymentStatus: PaymentStatus.PAID,
+          paymentStatus: isQr ? PaymentStatus.UNPAID : PaymentStatus.PAID,
           subtotal,
           discount,
           total,

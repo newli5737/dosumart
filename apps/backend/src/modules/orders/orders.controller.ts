@@ -98,6 +98,12 @@ export class OrdersController {
     return this.ordersService.updateStatus(id, dto.status);
   }
 
+  @Patch('admin/orders/:id/confirm-payment')
+  @Roles(Role.ADMIN, Role.SUPER_ADMIN, Role.STAFF)
+  confirmPayment(@Param('id') id: string) {
+    return this.ordersService.confirmPayment(id);
+  }
+
   @Patch('admin/orders/bulk-status')
   @Roles(Role.ADMIN, Role.SUPER_ADMIN, Role.STAFF)
   bulkUpdateStatus(@Body() dto: BulkStatusDto) {

@@ -3,6 +3,7 @@ import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { Role, PaymentMethod } from '@prisma/client';
 import { PosService } from './pos.service';
 import { ProductsService } from '../products/products.service';
+import { OrdersService } from '../orders/orders.service';
 import { Roles, CurrentUser } from '../../shared/decorators/auth.decorators';
 import { IsNumber, IsEnum, IsOptional, IsString, IsArray, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -30,6 +31,7 @@ export class PosController {
   constructor(
     private posService: PosService,
     private productsService: ProductsService,
+    private ordersService: OrdersService,
   ) {}
 
   @Post('shifts/open')
@@ -63,6 +65,11 @@ export class PosController {
   @Post('orders/:id/print')
   printOrder(@Param('id') id: string) {
     return this.posService.getPrintData(id);
+  }
+
+  @Post('orders/:id/confirm-payment')
+  confirmPayment(@Param('id') id: string) {
+    return this.ordersService.confirmPayment(id);
   }
 
   @Get('products/search')

@@ -416,6 +416,12 @@ async function main() {
         taxCode: '0312345678',
         website: 'mart.dosutech.site',
         logo: '/dosumart.svg',
+        sepay: {
+          accountNumber: '0901234567',
+          bankCode: 'MBBank',
+          accountHolder: 'CONG TY TNHH DOSUMART',
+          storeName: 'DoSuMart',
+        },
         banners: [
           {
             image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=1600&q=80',
@@ -457,6 +463,12 @@ async function main() {
         taxCode: '0312345678',
         website: 'mart.dosutech.site',
         logo: '/dosumart.svg',
+        sepay: {
+          accountNumber: '0901234567',
+          bankCode: 'MBBank',
+          accountHolder: 'CONG TY TNHH DOSUMART',
+          storeName: 'DoSuMart',
+        },
         banners: [
           {
             image: 'https://res.cloudinary.com/dn00btmpw/image/upload/v1782982295/d0ocynjittjuki4jpjco.jpg',

@@ -13,6 +13,7 @@ export type StoreInfo = {
 };
 
 export type ReceiptOrder = {
+  id?: string;
   code?: string;
   createdAt?: string;
   items?: Array<{

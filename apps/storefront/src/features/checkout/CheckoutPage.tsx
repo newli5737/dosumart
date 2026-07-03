@@ -9,6 +9,7 @@ import {
   ShoppingBag,
   ChevronRight,
   Lock,
+  QrCode,
   Truck,
 } from 'lucide-react';
 import { cartApi, ordersApi } from '@dosumart/api';
@@ -68,6 +69,7 @@ export default function CheckoutPage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<'COD' | 'BANK_TRANSFER'>('COD');
   const [address, setAddress] = useState({
     recipient: '',
     phone: '',
@@ -105,13 +107,24 @@ export default function CheckoutPage() {
       for (const item of items) {
         await cartApi.addItem(item.variantId, item.quantity);
       }
-      await ordersApi.checkout({
-        paymentMethod: 'COD',
+      const res = await ordersApi.checkout({
+        paymentMethod,
         shippingAddress: address,
         shippingFee,
       });
+      const order = res.data as { id: string; code: string; total: number };
       clear();
-      navigate('/tai-khoan');
+      if (paymentMethod === 'BANK_TRANSFER') {
+        navigate('/thanh-toan/qr', {
+          state: {
+            orderId: order.id,
+            orderCode: order.code,
+            total: Number(order.total),
+          },
+        });
+      } else {
+        navigate('/tai-khoan');
+      }
     } catch {
       setError('Không thể đặt hàng. Vui lòng kiểm tra đăng nhập và thử lại.');
     } finally {
@@ -228,8 +241,20 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
-              <label className="flex cursor-pointer items-start gap-4 rounded-xl border-2 border-[#f97316] bg-orange-50/50 p-4">
-                <input type="radio" name="payment" defaultChecked className="mt-1 accent-[#f97316]" />
+              <label
+                className={`flex cursor-pointer items-start gap-4 rounded-xl border-2 p-4 transition-colors ${
+                  paymentMethod === 'COD'
+                    ? 'border-[#f97316] bg-orange-50/50'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="payment"
+                  checked={paymentMethod === 'COD'}
+                  onChange={() => setPaymentMethod('COD')}
+                  className="mt-1 accent-[#f97316]"
+                />
                 <div className="flex-1">
                   <p className="font-semibold text-[#111827]">Thanh toán khi nhận hàng (COD)</p>
                   <p className="mt-1 text-sm text-[#6b7280]">
@@ -237,6 +262,29 @@ export default function CheckoutPage() {
                   </p>
                 </div>
                 <Truck className="h-5 w-5 shrink-0 text-[#f97316]" />
+              </label>
+
+              <label
+                className={`mt-3 flex cursor-pointer items-start gap-4 rounded-xl border-2 p-4 transition-colors ${
+                  paymentMethod === 'BANK_TRANSFER'
+                    ? 'border-[#f97316] bg-orange-50/50'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="payment"
+                  checked={paymentMethod === 'BANK_TRANSFER'}
+                  onChange={() => setPaymentMethod('BANK_TRANSFER')}
+                  className="mt-1 accent-[#f97316]"
+                />
+                <div className="flex-1">
+                  <p className="font-semibold text-[#111827]">Chuyển khoản QR (SePay)</p>
+                  <p className="mt-1 text-sm text-[#6b7280]">
+                    Quét mã VietQR sau khi đặt hàng — nội dung CK là mã đơn 8 ký tự
+                  </p>
+                </div>
+                <QrCode className="h-5 w-5 shrink-0 text-[#f97316]" />
               </label>
             </section>
           </div>

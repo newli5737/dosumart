@@ -9,6 +9,7 @@ import LoginPage from './features/auth/LoginPage';
 import RegisterPage from './features/auth/RegisterPage';
 import AccountPage from './features/account/AccountPage';
 import CheckoutPage from './features/checkout/CheckoutPage';
+import CheckoutQrPage from './features/checkout/CheckoutQrPage';
 
 export default function App() {
   return (
@@ -21,6 +22,7 @@ export default function App() {
           <Route path="/san-pham/:slug" element={<ProductDetailPage />} />
           <Route path="/gio-hang" element={<CartPage />} />
           <Route path="/thanh-toan" element={<CheckoutPage />} />
+          <Route path="/thanh-toan/qr" element={<CheckoutQrPage />} />
           <Route path="/dang-nhap" element={<LoginPage />} />
           <Route path="/dang-ky" element={<RegisterPage />} />
           <Route path="/tai-khoan" element={<AccountPage />} />
