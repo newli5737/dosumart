@@ -6,6 +6,14 @@
 | Quầy thu ngân | https://pos-mart.dosutech.site | Thu ngân |
 | Quản lý | https://admin-mart.dosutech.site | Chủ cửa hàng, quản lý |
 
+### Tài khoản thử (mật khẩu: `123456`)
+
+| Trang | Email đăng nhập |
+|-------|-----------------|
+| https://mart.dosutech.site | khach@dosumart.vn |
+| https://pos-mart.dosutech.site | thungan@dosumart.vn |
+| https://admin-mart.dosutech.site | admin@dosumart.vn |
+
 ---
 
 ## Cửa hàng online — https://mart.dosutech.site
